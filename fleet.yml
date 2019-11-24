@@ -1,0 +1,49 @@
+---
+AT75:
+        name: ATR 72-500
+        ktas: 460 # kt
+        range: 850 # nm
+
+E190:
+        name: Embraer 190
+        ktas: 460 # kt
+        range: 2400 # nm
+
+B737:
+        name: Boeing 737-700
+        ktas: 460 # kt
+        range: 2500 # nm
+
+B738:
+        name: Boeing 737-800
+        ktas: 460 # kt
+        range: 2000 # nm
+
+B38M:
+        name: Boeing 737-MAX 8
+        ktas: 450 # kt
+        range: 3600 # nm
+
+B763:
+        name: Boeing 767-300
+        ktas: 460  # kt
+        range: 6105 # nm
+
+B744:
+        name: Boeing 747-400
+        ktas: 510 # kt
+        range: 7260 # nm
+
+
+B788:
+        name: Boeing 787-8
+        ktas: 488 # kt
+        range: 7355 # nm
+
+B789:
+        name: Boeing 787-9
+        ktas: 488 # kt
+        range: 7635 # nm
+
+
+
