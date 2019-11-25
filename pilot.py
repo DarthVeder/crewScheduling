@@ -6,6 +6,7 @@ Copyright: 2019 -
 License: GPL 3.0
 """
 
+
 class Pilot:
     def  __init__(self, name = None):
         self.name = name
@@ -18,7 +19,7 @@ class Pilot:
         self.name = name
 
     def retrieve(self):
-        return (self.name, self.aircraft, self.grade, self.hours, self.hub)
+        return self.name, self.aircraft, self.grade, self.hours, self.hub
         
 
 if __name__ == '__main__':
