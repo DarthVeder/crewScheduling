@@ -1,20 +1,39 @@
 """
 Class to manage an airline company.
 
-Author: MM
+Author: Marco Messina
 Copyright: 2019 -
-Licensce: GPL 3.0
+Licence: GPL 3.0
 """
 import pickle
 from pilot import Pilot
 import collections
 import yaml
+import datetime
 
 Grade = collections.namedtuple('Grade', 'hours title')
-Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance')
+Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft')
+#Aircraft = collections.namedtuple('Aircraft', 'id name ktas range')
+
+MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
+MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
+FSX_DIRECTORY = 'C:\\Microsoft Flight Simulator X'
+MAXIMUM_FLIGHT_TIME_HRS = 14.0
+
+def lmt2utc(latitude_deg, lmt):
+    deltat = datetime.timedelta(hours=latitude_deg/15.0)
+    utc = lmt - deltat
+
+    return utc
+
+def utc2lmt(latitude_deg, utc):
+    deltat = datetime.timedelta(hours=latitude_deg/15.0)
+    lmt = utc + deltat
+
+    return lmt
 
 class Airline:
-    def __init__(self, config_file = None):
+    def __init__(self, config_file=None):
         if config_file is None:
             name = None
             code = None
@@ -27,6 +46,7 @@ class Airline:
         self.grades = grades
         self.pilots = []
         self.aircrafts = {}
+        self.airports = {}
         self.flights = {}
         self.active_pilot = None
         self.__routes_tree = {}
@@ -65,17 +85,21 @@ class Airline:
                 self.grades, self.aircrafts, self.flights)
 
     @staticmethod
-    def assignAircraftToRoutes(aircrafts, distance_to_fly):
+    def assignAircraftToRoute(aircrafts, distance_to_fly):
         regulated_distance = 1.1 * distance_to_fly # 10% margin to include challenging airports
-        # First loop to select all aircraft that can make this distance
-        proposed_aircraft = {}
+        # Loop on all aircrafts and select all that can make this distance
+        proposed_aircrafts = {}
+
         for (ida, aircraft) in aircrafts.items():
             # the 5/60*ktas is to avoid huge aircraft assigned to small routes
-            if aircraft['range'] >= regulated_distance and\
-                regulated_distance>=aircraft['ktas']*5/60:
-                proposed_aircraft[ida] = aircraft['name']
+            if aircraft['range'] >= regulated_distance and \
+                regulated_distance>=aircraft['ktas']*MINIMUM_FLIGHT_TIME_DISTANCE_HRS:
+                proposed_aircrafts[ida] = aircraft['name']
 
-        return proposed_aircraft
+        return proposed_aircrafts
+
+    def getAirportLongitude(self, icao):
+        return self.airports[icao][1]
 
     def loadFleet(self, fleet_file):
         # Parsing Fleet file and saving the fleet in dictionary aircrafts.
@@ -85,7 +109,13 @@ class Airline:
             aircrafts = yaml.full_load(file)
         self.aircrafts = aircrafts
         print('[OK]')
-        
+
+    def getAircraftKtas(self, aircraft_id):
+        return self.aircrafts[aircraft_id]['ktas']
+
+    def getAircraftName(self, aircraft_id):
+        return self.aircrafts[aircraft_id]['name']
+
     def pickle(self):
         f = open('airline.ms', 'wb')
         pickle.dump(self, f)
@@ -97,28 +127,30 @@ class Airline:
             return pickle.load(f)
 
     def buildRoutes(self, file_schedule):
-        FSX_DIRECTORY = 'C:\\Microsoft Flight Simulator X'
+
         import os
+        from math import ceil
         from point import Point, distance
 
+
         print("Building routes....", end="", flush=True)
-        # Loading FSX airports from MakeRunways file r5.csv. Storing data in airports
+        # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
         # dictionary. Usage: airports[icao] = (lat, lon)
         file = 'r5.csv'
-        airports = {}
-        with open(FSX_DIRECTORY + os.sep+ file, 'r') as fin:
+        with open(FSX_DIRECTORY + os.sep + file, 'r') as fin:
             for line in fin:
                 # Inserting only the first runway and its lat, lon. It is assumed 
-                # the airport has the same coordinates.
+                # the airport has the same coordinates as the runway.
                 (icao, hdg, lat, lon, *trash ) = line.split(',')
-                if icao not in airports:
-                    airports[icao] = (float(lat), float(lon))
+                if icao not in self.airports:
+                    self.airports[icao] = (float(lat), float(lon))
                     
-        # Reading full flight schedule from FSC scheduling file format
+        # Reading full flight schedule from FSC scheduling file
         comments = [';']
-        # flights are stored in a dictionary as Flight namedtuple (id, dep, arr, hhmm_lt, distance)
-        # flights[id] = (id, dep, arr, local_lt, distance). If no local
-        # departure time is given a -1 is set. id is just an integer index.
+        # flights are stored in a dictionary as Flight namedtuple (id, dep, arr, time_lt, distance, aircrafts)
+        # flights[idx] = (id, dep, arr, local_lt, distance, aicrafts(=[])). If no local
+        # departure time is given a custom departure is set based on flight time and aircraft preparation time.
+        # idx is just an integer index, not related to flight id.
         flights = {}
         key = 0
         with open(file_schedule, 'r') as fin:
@@ -128,29 +160,39 @@ class Airline:
                     flight_text = line.split('=')[1]
                     (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
                     # other can contain other flight info, so it should be checked
-                    Pdep = Point(airports[dep][0], airports[dep][1])
-                    Parr = Point(airports[arr][0], airports[arr][1])
+                    Pdep = Point(self.airports[dep][0], self.airports[dep][1])
+                    Parr = Point(self.airports[arr][0], self.airports[arr][1])
                     D = distance(Pdep, Parr)
-                    flight = Flight(id=flight_number, arr=arr, dep=dep, time_lt=int(hhmm_lt), distance=D)
+                    flight = Flight(id=flight_number, arr=arr, dep=dep,
+                                    time_lt=datetime.time(hour=int(hhmm_lt[0:2]), minute=int(hhmm_lt[2:])),
+                                    distance=D, aircraft=None)
                     flights[key] = flight
                     key = key + 1
         
                     new_flights = [x for x in other[1:] if x != '']
                     if new_flights:
                         arr = new_flights[0]
-                        #Pdep = Point(airports[dep][0], airports[dep][1])
-                        Parr = Point(airports[arr][0], airports[arr][1])
+                        Parr = Point(self.airports[arr][0], self.airports[arr][1])
                         D = distance(Pdep, Parr)
-                        flight = Flight(id=flight_number, dep=arr, arr=arr, time_lt=-1, distance=D)
+                        flight = Flight(id=flight_number, dep=arr, arr=arr,
+                                        time_lt=datetime.time(hour=17, minute=0),
+                                        distance=D, aircraft=None)
                         flights[key] = flight
                         key = key + 1
                         for i in range(1, len(new_flights)):
                             dep = new_flights[i-1]
                             arr = new_flights[i]
-                            Pdep = Point(airports[dep][0], airports[dep][1])
-                            Parr = Point(airports[arr][0], airports[arr][1])
+                            Pdep = Point(self.airports[dep][0], self.airports[dep][1])
+                            Parr = Point(self.airports[arr][0], self.airports[arr][1])
                             D = distance(Pdep, Parr)
-                            flight = Flight(id=flight_number, dep=dep, arr=arr, time_lt=-1, distance=D)
+                            aircrafts = self.assignAircraftToRoute(self.aircrafts, D)
+                            aircraft_id = list(aircrafts.keys())[0]
+                            ktas = self.getAircraftKtas(aircraft_id)
+                            dep_time = ceil(MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS+ceil(D/ktas))
+
+                            flight = Flight(id=flight_number, dep=dep, arr=arr,
+                                            time_lt=datetime.time(hour=dep_time, minute=0),
+                                            distance=D, aircraft=None)
                             flights[key] = flight
                             key = key + 1
 
@@ -158,19 +200,18 @@ class Airline:
         fout = open(file_out, 'w')
 
         for (k, flight) in flights.items():
-            flight_no, dep, arr, etd_lt, D = flight
-            aircraft = self.assignAircraftToRoutes(self.aircrafts, D)
-        
-            line = '{} {} ({:04d} LT)->{} {} nm {}'.format(flight_no, dep, etd_lt, arr, D, aircraft)
+            flight_no, dep, arr, etd_lt, D, _ = flight
+            aircrafts = self.assignAircraftToRoute(self.aircrafts, D)
+            line = '{} {} ({} LT)->{} {} nm {}'.format(flight_no, dep, etd_lt, arr, D, aircrafts)
             fout.write(line+'\n')
+            flights[k] = Flight(id=flight_no, dep=dep, arr=arr, time_lt=etd_lt, distance=D, aircraft=aircrafts)
 
             # Building routes tree
             if dep in self.__routes_tree.keys():
                 # ok, already in the tree, adding the new destination tuple (flight_no, arr)
-                self.__routes_tree[dep].append(flight)
+                self.__routes_tree[dep].append(flights[k])
             else:
-                self.__routes_tree[dep] = [flight]
-
+                self.__routes_tree[dep] = [flights[k]]
 
         # for k, value in flights.items():
         #    print(k,value)
@@ -179,15 +220,21 @@ class Airline:
         
         self.flights = flights
         print('[OK]')
-        
-#### PILOT UTILITIES
+
+    def getAllConnectionsFrom(self, airport_icao):
+        return self.__routes_tree[airport_icao]
+
+# PILOT UTILITIES
+    def getActivePilotAircraft(self):
+        return self.active_pilot.aircraft
+
     def setActivePilot(self, active_pilot):
         self.active_pilot = active_pilot
 
     def assignPilot(self, new_pilot):
         self.pilots.append(new_pilot)
         
-    def assignAircraftToPilot(self, pilot=None, aircraft=None):
+    def assignAircraftToActivePilot(self, pilot=None, aircraft=None):
         if aircraft is None and pilot is None:
             # assign by default first aircraft in fleet.yml file
             self.active_pilot.aircraft = list(self.aircrafts.keys())[0] 
@@ -213,7 +260,7 @@ class Airline:
             if diff >= 0:
                 self.active_pilot.grade = self.grades[i].title
                 return 
-            
+
     def assignRoster(self):
         """
         The roster is found in the following way: first a random flight is selected form the __routes_tree base on the
@@ -239,26 +286,52 @@ class Airline:
         import time
         import random
         random.seed()
-        roster = {}
 
-        last_airport = self.hub
+        active_pilot_acft_id = self.getActivePilotAircraft()
+        dep_airport = self.hub
 
-        # first random flight of the day
-        idestination = random.randint(0, len(self.__routes_tree[last_airport])-1)
-        roster[last_airport] = self.__routes_tree[last_airport][idestination]
+        # selective only flights for current active pilot aircraft
+        flights = [f for f in self.getAllConnectionsFrom(dep_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+        # suffling flights
+        #random.shuffle(flights)
 
-        day = time.localtime(time.time()).tm_mday
-        ft = 0
-        print('Start roster: {} at {}'.format(day, roster[last_airport].time_lt - 100))
-        ft = ft + 1
+        day = datetime.date.today()
+        delta = datetime.timedelta(hours=1)  # time before first presentation at crew dispatcher
+        flight_departure = datetime.datetime.combine(day, flights[0].time_lt)
+        arr_airport = flights[0].arr
+        start_roster_time = flight_departure - delta
+        dep_utc_time = lmt2utc(self.getAirportLongitude(dep_airport), flight_departure)
+        print('Start roster (all times are LMT): {}'.format(start_roster_time.isoformat()))
+        speed = self.getAircraftKtas(self.getActivePilotAircraft())
+        ft = flights[0].distance/speed
+        print('{} {} {} {}'.format(flights[0].dep, flights[0].arr, dep_utc_time, flights[0].id))
+        del flights[0]  # first flight is starting flight. Removing from list.
 
+        roster = []
+        build_roster = True
+        total_ft = ft
+        flights = [f for f in self.getAllConnectionsFrom(arr_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+        while build_roster:
+            flight = random.choice(flights)
+            ft = flight.distance/speed
+            arr_utc_time = dep_utc_time + datetime.timedelta(hours=ft)
+            #arr_lmt_time = utc2lmt(self.getAirportLongitude(flight.arr), arr_utc_time)
+            total_ft = total_ft + (arr_utc_time - dep_utc_time).total_seconds()/3600.0
+            new_dep_airport = flight.arr
+            if total_ft < MAXIMUM_FLIGHT_TIME_HRS:
+                roster.append(flight)
+                #print(ft)
+                flights = [f for f in self.getAllConnectionsFrom(new_dep_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+            else:
+                build_roster = False
 
-        for k, values in roster.items():
-            print(k,values)
+        for r in roster:
+            print('{2} {3} {0} {1}'.format(datetime.datetime.combine(day, r.time_lt).isoformat(), r.id, r.dep, r.arr))
+        print('Total flight time: {} hours'.format(total_ft))
 
 if __name__ == '__main__':
     import sys
-    load = True
+    load = False
     if not load:
         company_config_file = 'RoyalAirMaroc.cfg'
         company_schedule_file = 'RoyalAirMaroc_schedule.txt'
@@ -274,7 +347,9 @@ if __name__ == '__main__':
         new_company.loadFleet(company_fleet_file)
         new_company.buildRoutes(company_schedule_file)
         new_company.setActivePilot(pilot1)
-   
+        new_company.assignAircraftToActivePilot()
+        new_company.assignGrade()
+
         # Saving to file
         new_company.pickle()
     else:
@@ -282,8 +357,8 @@ if __name__ == '__main__':
         new_company = Airline()
         new_company = Airline.unpickle()
 
-        new_company.assignAircraftToPilot()
-        new_company.assignGrade() 
+        # new_company.assignAircraftToPilot()
+        # new_company.assignGrade()
 
     print('Active pilot: {}'.format(new_company.active_pilot.retrieve()))
 
