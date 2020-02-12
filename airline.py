@@ -17,7 +17,7 @@ Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft'
 
 MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
 MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
-FSX_DIRECTORY = 'C:\\Microsoft Flight Simulator X'
+FSX_DIRECTORY = './data/'
 MAXIMUM_FLIGHT_TIME_HRS = 14.0
 
 def lmt2utc(latitude_deg, lmt):
