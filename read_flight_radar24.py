@@ -1,6 +1,7 @@
 import logging
 import logging.config
 import json
+import argparse
 
 
 logging_dict = {
@@ -66,7 +67,7 @@ def generate_schedule(apt, pnetwork):
             message.append(iarr)
             message.append(lnetwork)
             message.append(pnetwork.get(apt))
-            logger.error(message)
+            logger.error(' '.join(message))
 
         flights.update(
             {apt: arr}
@@ -89,16 +90,39 @@ def build_network(data):
 
     return network
 
+def show_data(network):
+    hubs = list(network.keys())
+    conn = []
+    text = []
+    for apt in network:
+        conn.append(len(network[apt]))
+        text .append(
+                    'airport {} - connections {}'\
+                    .format(apt, len(network[apt]))
+                     )
+    header = 'Network data:'
+    logger.info('\n'.join([header, '\n'.join(text)]))
+
+    logger.info('possible hubs:')
+    conn = sorted(conn, reverse=True)
+
 
 if __name__ == '__main__':
     logging.config.dictConfig(logging_dict)
     logger = logging.getLogger('bnu')
     logger.info('staring building network utility')
+
     file_in = './data/avianca_routes.json'
-    data = read_flightradar_data(file_in)
+    logger.info('reading file "{}"'.format(file_in))
+    try:
+        data = read_flightradar_data(file_in)
+    except Exception as e:
+        logger.error(str(e))
+        exit(1)
 
     network = build_network(data)
 
+    show_data(network)
     # phubs = find_probable_hubs(network)
     # print(phubs)
 
