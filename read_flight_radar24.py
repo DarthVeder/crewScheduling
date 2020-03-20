@@ -1,4 +1,34 @@
+import logging
+import logging.config
 import json
+
+
+logging_dict = {
+    'version': 1,
+    'formatters': {
+         'verbose': {
+            'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
+         },
+        'simple': {
+            'format': '%(levelname)s %(message)s'
+        }
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'level': 'DEBUG',
+            'formatter': 'simple',
+            'stream': 'ext://sys.stdout'
+        }
+    },
+    'loggers': {
+        'bnu': {
+            'level': 'DEBUG',
+            'handlers': ['console'],
+            'propagate': 'no'
+        }
+    }
+}
 
 
 def read_flightradar_data(file_in):
@@ -6,7 +36,7 @@ def read_flightradar_data(file_in):
         data = json.load(fin)
 
     return data
-    
+
 
 def find_probable_hubs(network):
     hubs = []
@@ -15,6 +45,7 @@ def find_probable_hubs(network):
             hubs.append(dest)
 
     return hubs
+
 
 def generate_schedule(apt, pnetwork):
     flights = {}
@@ -30,13 +61,13 @@ def generate_schedule(apt, pnetwork):
         try:
             arr = lnetwork[iarr]
         except IndexError:
-            print('ll')
-            print(apt)
-            print(iarr)
-            print(lnetwork)
-            print(pnetwork.get(apt))
-        
-        # pnetwork[apt].pop(iarr)
+            message = []
+            message.append(apt)
+            message.append(iarr)
+            message.append(lnetwork)
+            message.append(pnetwork.get(apt))
+            logger.error(message)
+
         flights.update(
             {apt: arr}
             )
@@ -46,45 +77,46 @@ def generate_schedule(apt, pnetwork):
     return flights, visited, apt
 
 
-if __name__ == '__main__':
-    file_in = './data/avianca_routes.json'
-
-    data = read_flightradar_data(file_in)
-
-
-    network = {}    
+def build_network(data):
+    network = {}
     for i in data:
         dep = i.get("airport1")['icao']
         arr = i.get("airport2")['icao']
-        # print('{} -> {}'.format(dep, arr))
         if dep not in network.keys():
             network[dep] = [arr]
         else:
             network[dep].append(arr)
 
+    return network
 
- #   phubs = find_probable_hubs(network)
- #   print(phubs)
+
+if __name__ == '__main__':
+    logging.config.dictConfig(logging_dict)
+    logger = logging.getLogger('bnu')
+    logger.info('staring building network utility')
+    file_in = './data/avianca_routes.json'
+    data = read_flightradar_data(file_in)
+
+    network = build_network(data)
+
+    # phubs = find_probable_hubs(network)
+    # print(phubs)
 
     hubs = ['SKBO', 'MSLP', 'SPJC', 'MROC', 'SEQM']
     for hub in hubs:
         connections = network.get(hub, None)
         if connections:
-            print('HUB: {}\n  Destinations: {}'
-                  .format(hub, connections))
+            logger.debug('HUB: {}\n  Destinations: {}'
+                         .format(hub, connections))
 
     fout = open('test.json', 'w')
     json.dump(network, fout, indent=4)
     fout.close()
 
-
     import random
     random.seed()
     assigned_hub = 'SPJC'
-     # hubs[
-     #   random.randrange(len(hubs))
-     #   ]
-    print('Assigned hub: {}'.format(assigned_hub))
+    logger.info('Assigned hub: {}'.format(assigned_hub))
 
     pnetwork = network.copy()
 
@@ -94,23 +126,13 @@ if __name__ == '__main__':
         for f in flights_to_remove:
             pnetwork[hub].remove(f)
 
- #   print(
- #       json.dumps(pnetwork, indent=4)
- #       )
-
     apt = assigned_hub
     for n in range(3):
-        print('Schedule {}'.format(n))
-        print('From {}'.format(apt))
+        logger.debug('Schedule {}'.format(n))
+        logger.debug('From {}'.format(apt))
         flights, visited, end = generate_schedule(apt, pnetwork)
         apt = end
-        
 
         for d, a in flights.items():
-            print('{}[{}] - {}[{}]'.format(d, visited.get(d, 0),
-                                           a, visited.get(a, 0)))
-
-
-
-
-
+            logger.debug('{}[{}] - {}[{}]'
+                         .format(d, visited.get(d, 0), a, visited.get(a, 0)))
