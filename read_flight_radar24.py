@@ -3,13 +3,20 @@ import logging.config
 import json
 import argparse
 
+MAJOR = 1
+MINOR = 0
+PATCH = 0
+VERSION = '.'.join(
+    [str(x) for x in [MAJOR, MINOR, PATCH]]
+)
+MAX_HUBS = 10
 
 logging_dict = {
     'version': 1,
     'formatters': {
-         'verbose': {
+        'verbose': {
             'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
-         },
+        },
         'simple': {
             'format': '%(levelname)s %(message)s'
         }
@@ -17,7 +24,7 @@ logging_dict = {
     'handlers': {
         'console': {
             'class': 'logging.StreamHandler',
-            'level': 'DEBUG',
+            'level': 'INFO',
             'formatter': 'simple',
             'stream': 'ext://sys.stdout'
         }
@@ -40,12 +47,22 @@ def read_flightradar_data(file_in):
 
 
 def find_probable_hubs(network):
-    hubs = []
-    for dest in network:
-        if len(network[dest]) > 5 and dest not in hubs:
-            hubs.append(dest)
+    conn = {}
+    for apt in network:
+        if len(network[apt]) > 1:
+            conn[apt] = len(network[apt])
+    probable_hubs = {
+        k: v for k, v in sorted(
+            conn.items(), key=lambda x: x[1], reverse=True
+        )
+    }
+    while len(probable_hubs) > MAX_HUBS:
+        probable_hubs.popitem()
 
-    return hubs
+    while len(probable_hubs) > MAX_HUBS:
+        probable_hubs.popitem()
+
+    return list(probable_hubs.keys())
 
 
 def generate_schedule(apt, pnetwork):
@@ -56,7 +73,7 @@ def generate_schedule(apt, pnetwork):
         if len(lnetwork) > 1:
             iarr = random.randrange(
                 len(lnetwork)
-                )
+            )
         else:
             iarr = 0
         try:
@@ -71,7 +88,7 @@ def generate_schedule(apt, pnetwork):
 
         flights.update(
             {apt: arr}
-            )
+        )
         visited[apt] = visited.get(apt, 0) + 1
         apt = arr
 
@@ -90,31 +107,110 @@ def build_network(data):
 
     return network
 
-def show_data(network):
-    hubs = list(network.keys())
-    conn = []
-    text = []
-    for apt in network:
-        conn.append(len(network[apt]))
-        text .append(
-                    'airport {} - connections {}'\
-                    .format(apt, len(network[apt]))
-                     )
-    header = 'Network data:'
-    logger.info('\n'.join([header, '\n'.join(text)]))
 
-    logger.info('possible hubs:')
-    conn = sorted(conn, reverse=True)
+def show_data(network):
+    conn = {}
+    for k, v in network.items():
+        conn[k] = len(v)
+
+    total_conn = sum(conn.values())
+    header = 'Network data:'
+    logger.info(
+        '\n'.join([
+            header, '\n'.join([
+                '{}: {} ({:0.2f}%)'
+                .format(k, v, v / total_conn * 100)
+                for k, v in conn.items()
+            ])
+        ])
+    )
+    probable_hubs = find_probable_hubs(network)
+    logger.info(
+        'possible hubs:\n' +
+        '\n'.join(probable_hubs)
+    )
+
+    for hub in probable_hubs:
+        connections = network.get(hub, None)
+        if connections:
+            logger.debug('HUB: {}\n  Destinations: {}'
+                         .format(hub, connections))
 
 
 if __name__ == '__main__':
-    logging.config.dictConfig(logging_dict)
+    parser = argparse.ArgumentParser(
+        description='Building airline network from Flightradar24 json file.'
+    )
+
+    parser.add_argument(
+        '--version',
+        default='%(prog)s {}'.format(VERSION),
+        action='version')
+    parser.add_argument(
+        '--stats',
+        '-s',
+        help='print on screen some network stats',
+        action='store_const',
+        dest='stats',
+        const=True
+    )
+    parser.add_argument(
+        '--verbosity',
+        help='verbosity level',
+        dest='verbosity',
+        choices=['info', 'debug', 'error'],
+        default='INFO'
+    )
+    parser.add_argument(
+        '-i',
+        dest='file_in',
+        default=None,
+        required=True,
+        help='input json file from Flightradar24'
+    )
+    parser.add_argument(
+        '-o',
+        help='output ASCII schedule file',
+        default=None,
+        dest='file_out'
+    )
+    parser.add_argument(
+        '-n',
+        help='print network json file',
+        default=None,
+        dest='file_network_out'
+    )
+    parser.add_argument(
+        '--from',
+        dest='from_date',
+        default=None
+    )
+    parser.add_argument(
+        '--to',
+        dest='to_date',
+        default=None
+    )
+
+    args = parser.parse_args()
+
+    try:
+        if args.verbosity == 'debug':
+            logging_dict['handlers']['console']['level'] = 'DEBUG'
+        elif args.verbosity == 'error':
+            logging_dict['handlers']['console']['level'] = 'ERROR'
+
+        logging.config.dictConfig(logging_dict)
+
+    except Exception as e:
+        print(e)
+        exit(1)
+
     logger = logging.getLogger('bnu')
     logger.info('staring building network utility')
-
-    file_in = './data/avianca_routes.json'
-    logger.info('reading file "{}"'.format(file_in))
+    logger.debug('args: {}'.format(args))
+    file_in = args.file_in
     try:
+        logger.info('reading file "{}"'.format(file_in))
         data = read_flightradar_data(file_in)
     except Exception as e:
         logger.error(str(e))
@@ -122,26 +218,43 @@ if __name__ == '__main__':
 
     network = build_network(data)
 
-    show_data(network)
-    # phubs = find_probable_hubs(network)
-    # print(phubs)
+    if args.stats:
+        logger.info('building network statistics')
+        show_data(network)
+        exit(0)
 
-    hubs = ['SKBO', 'MSLP', 'SPJC', 'MROC', 'SEQM']
-    for hub in hubs:
-        connections = network.get(hub, None)
-        if connections:
-            logger.debug('HUB: {}\n  Destinations: {}'
-                         .format(hub, connections))
-
-    fout = open('test.json', 'w')
-    json.dump(network, fout, indent=4)
-    fout.close()
-
+    if args.file_network_out:
+        try:
+            logger.info('writing network json file "{}'.
+                        format(args.file_network_out))
+            fout = open(args.file_network_out, 'w')
+            json.dump(network, fout, indent=4)
+            fout.close()
+        except Exception as e:
+            logger.error('error in writing json network file "{}". {}'
+                         .format(args.file_network_out, str(e)))
     import random
+
     random.seed()
+    hubs = ['SKBO', 'MSLP', 'SPJC', 'MROC', 'SEQM']
+    # hubs = None
+    if not hubs:
+        logger.info('no hub data. Guessing hubs')
+        hubs = find_probable_hubs(network)
+        logger.info('proposed hubs: {}'.format(' '.join(hubs)))
+
     assigned_hub = 'SPJC'
+    # assigned_hub = None
+    if not assigned_hub:
+        logger.info('assigning random hub')
+        assigned_hub = random.choice(hubs)
+
+    if assigned_hub not in hubs:
+       logger.error('assigned hub "{}" not in company hubs "{}'
+                    .format(assigned_hub, ' '.join(hubs)))
     logger.info('Assigned hub: {}'.format(assigned_hub))
 
+    logger.info('computing assigned hub network')
     pnetwork = network.copy()
 
     for hub in [h for h in hubs if h not in assigned_hub]:
@@ -149,6 +262,11 @@ if __name__ == '__main__':
                              if x not in assigned_hub]
         for f in flights_to_remove:
             pnetwork[hub].remove(f)
+
+    logger.info('generating schedule')
+    if args.from_date is None or args.to_date is None:
+        logger.error('need from and to dates for generating a schedule')
+        exit(1)
 
     apt = assigned_hub
     for n in range(3):
