@@ -10,6 +10,7 @@ VERSION = '.'.join(
     [str(x) for x in [MAJOR, MINOR, PATCH]]
 )
 MAX_HUBS = 10
+MAX_FLIGHTS_IN_SCHEDULE = 5
 
 logging_dict = {
     'version': 1,
@@ -65,34 +66,22 @@ def find_probable_hubs(network):
     return list(probable_hubs.keys())
 
 
-def generate_schedule(apt, pnetwork):
-    flights = {}
+def generate_schedule(dep_apt, pilot_network):
+    flights = []
     visited = {}
-    while len(flights) < 5:
-        lnetwork = pnetwork.get(apt)
-        if len(lnetwork) > 1:
-            iarr = random.randrange(
-                len(lnetwork)
-            )
-        else:
-            iarr = 0
-        try:
-            arr = lnetwork[iarr]
-        except IndexError:
-            message = []
-            message.append(apt)
-            message.append(iarr)
-            message.append(lnetwork)
-            message.append(pnetwork.get(apt))
-            logger.error(' '.join(message))
-
-        flights.update(
-            {apt: arr}
+    apt = dep_apt
+    while len(flights) < MAX_FLIGHTS_IN_SCHEDULE:
+        lnetwork = pilot_network.get(apt)
+        arr = random.choice(lnetwork)
+        flights.append(
+            [apt, arr]
         )
         visited[apt] = visited.get(apt, 0) + 1
         apt = arr
 
-    return flights, visited, apt
+    end_apt = apt
+
+    return flights, visited, end_apt
 
 
 def build_network(data):
@@ -135,6 +124,19 @@ def show_data(network):
         if connections:
             logger.debug('HUB: {}\n  Destinations: {}'
                          .format(hub, connections))
+
+def format_schedule(flights):
+    header = ['DEP             ARR    ',
+              '-----------------------']
+    line = []
+    for d, a in flights:
+        line.append(
+            '{dep}  {arr}'.format(dep=d, arr=a)
+        )
+
+    text = '\n'.join(header + line)
+
+    return text
 
 
 if __name__ == '__main__':
@@ -255,26 +257,30 @@ if __name__ == '__main__':
     logger.info('Assigned hub: {}'.format(assigned_hub))
 
     logger.info('computing assigned hub network')
-    pnetwork = network.copy()
 
+    pilot_network = network.copy()
     for hub in [h for h in hubs if h not in assigned_hub]:
-        flights_to_remove = [x for x in pnetwork[hub]
+        flights_to_remove = [x for x in pilot_network[hub]
                              if x not in assigned_hub]
         for f in flights_to_remove:
-            pnetwork[hub].remove(f)
+            pilot_network[hub].remove(f)
 
     logger.info('generating schedule')
-    if args.from_date is None or args.to_date is None:
-        logger.error('need from and to dates for generating a schedule')
+    if args.from_date is None:
+        logger.error('need from date for generating a schedule')
         exit(1)
 
     apt = assigned_hub
     for n in range(3):
-        logger.debug('Schedule {}'.format(n))
+        logger.debug('Schedule {}'.format(n+1))
         logger.debug('From {}'.format(apt))
-        flights, visited, end = generate_schedule(apt, pnetwork)
-        apt = end
+        flights, visited, last_apt = generate_schedule(apt, pilot_network)
+        apt = last_apt
 
-        for d, a in flights.items():
-            logger.debug('{}[{}] - {}[{}]'
-                         .format(d, visited.get(d, 0), a, visited.get(a, 0)))
+        schedule = format_schedule(flights)
+        print(schedule)
+        print()
+
+        # for d, a in flights:
+        #     logger.debug('{}[{}] - {}[{}]'
+        #                  .format(d, visited.get(d, 0), a, visited.get(a, 0)))
