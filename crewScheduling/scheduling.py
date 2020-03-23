@@ -126,8 +126,8 @@ def show_data(network):
                          .format(hub, connections))
 
 def format_schedule(flights):
-    header = ['DEP             ARR    ',
-              '-----------------------']
+    header = ['Flight duty       Duty start      Duty end      Dep. time      Arr. Time    Dep.    Arr.',
+              '----------------------------------------------------------------------------------------']
     line = []
     for d, a in flights:
         line.append(
