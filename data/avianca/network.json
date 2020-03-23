@@ -1,0 +1,404 @@
+{
+    "SKSP": [
+        "SKBO"
+    ],
+    "SGAS": [
+        "SKBO"
+    ],
+    "TNCA": [
+        "SKBO"
+    ],
+    "SKAR": [
+        "SKBO"
+    ],
+    "SKBQ": [
+        "SKBO",
+        "SKRG",
+        "KMIA"
+    ],
+    "LEBL": [
+        "SKBO"
+    ],
+    "SKBG": [
+        "SKBO",
+        "SKCG",
+        "SKCC",
+        "SKRG",
+        "SKSM"
+    ],
+    "SKBO": [
+        "SKSP",
+        "SGAS",
+        "TNCA",
+        "SKAR",
+        "SKBQ",
+        "LEBL",
+        "SKBG",
+        "SKCL",
+        "SKCG",
+        "SKCC",
+        "MMUN",
+        "TNCC",
+        "SPZO",
+        "SKCZ",
+        "SKEJ",
+        "SKYP",
+        "SAEZ",
+        "SKFL",
+        "KFLL",
+        "SBGL",
+        "SBGR",
+        "MGGT",
+        "SEGU",
+        "KIAD",
+        "SKIB",
+        "KJFK",
+        "KLAX",
+        "SKLT",
+        "EGLL",
+        "SPJC",
+        "SLLP",
+        "LEMD",
+        "KMCO",
+        "SKRG",
+        "MMMX",
+        "KMIA",
+        "SKMR",
+        "EDDM",
+        "SUMU",
+        "SKMZ",
+        "SKNV",
+        "SKPE",
+        "SKPP",
+        "SKPS",
+        "MPTO",
+        "MDPC",
+        "SKRH",
+        "MSLP",
+        "SCEL",
+        "MDSD",
+        "MROC",
+        "TJSJ",
+        "SKSM",
+        "SKCO",
+        "SEQM",
+        "SKVP",
+        "SKVV",
+        "SLVR"
+    ],
+    "MZBZ": [
+        "MSLP"
+    ],
+    "SKCL": [
+        "SKBO",
+        "SKCG",
+        "SEGU",
+        "LEMD",
+        "SKRG",
+        "KMIA",
+        "SKPS",
+        "SKCO"
+    ],
+    "SKCG": [
+        "SKBG",
+        "SKBO",
+        "SKCL",
+        "SKRG",
+        "KMIA"
+    ],
+    "SKCC": [
+        "SKBG",
+        "SKBO",
+        "SKRG"
+    ],
+    "MMUN": [
+        "SKBO",
+        "MSLP"
+    ],
+    "TNCC": [
+        "SKBO"
+    ],
+    "SPZO": [
+        "SKBO",
+        "SPJC"
+    ],
+    "SKCZ": [
+        "SKBO"
+    ],
+    "KDFW": [
+        "MSLP"
+    ],
+    "SKEJ": [
+        "SKBO"
+    ],
+    "KEWR": [
+        "MSLP"
+    ],
+    "SKYP": [
+        "SKBO"
+    ],
+    "SAEZ": [
+        "SKBO",
+        "SPJC"
+    ],
+    "SKFL": [
+        "SKBO"
+    ],
+    "KFLL": [
+        "SKBO"
+    ],
+    "MGFL": [
+        "MGGT"
+    ],
+    "SBGL": [
+        "SKBO",
+        "SPJC"
+    ],
+    "SEGS": [
+        "SEGU",
+        "SEQM"
+    ],
+    "SBGR": [
+        "SKBO",
+        "SPJC"
+    ],
+    "MGGT": [
+        "SKBO",
+        "MGFL",
+        "KLAX",
+        "MSLP",
+        "MROC",
+        "MHTG"
+    ],
+    "SEGU": [
+        "SKBO",
+        "SKCL",
+        "SEGS",
+        "SPJC",
+        "MSLP",
+        "SEST",
+        "SEQM"
+    ],
+    "KIAD": [
+        "SKBO",
+        "MSLP"
+    ],
+    "KIAH": [
+        "MSLP"
+    ],
+    "SKIB": [
+        "SKBO"
+    ],
+    "KJFK": [
+        "SKBO",
+        "SKRG",
+        "MSLP",
+        "MHLM"
+    ],
+    "KLAX": [
+        "SKBO",
+        "MGGT",
+        "MSLP"
+    ],
+    "SKLT": [
+        "SKBO"
+    ],
+    "EGLL": [
+        "SKBO"
+    ],
+    "SPJC": [
+        "SKBO",
+        "SPZO",
+        "SAEZ",
+        "SBGL",
+        "SBGR",
+        "SEGU",
+        "SLLP",
+        "MMMX",
+        "KMIA",
+        "SBPA",
+        "MDPC",
+        "MSLP",
+        "SCEL",
+        "MROC",
+        "SEQM"
+    ],
+    "SLLP": [
+        "SKBO",
+        "SPJC"
+    ],
+    "LEMD": [
+        "SKBO",
+        "SKCL",
+        "SKRG"
+    ],
+    "KMCO": [
+        "SKBO"
+    ],
+    "SKRG": [
+        "SKBQ",
+        "SKBG",
+        "SKBO",
+        "SKCL",
+        "SKCG",
+        "SKCC",
+        "KJFK",
+        "LEMD",
+        "KMIA",
+        "SKMR",
+        "SKSM"
+    ],
+    "SEMT": [
+        "SEQM"
+    ],
+    "MMMX": [
+        "SKBO",
+        "SPJC",
+        "MSLP"
+    ],
+    "KMIA": [
+        "SKBQ",
+        "SKBO",
+        "SKCL",
+        "SKCG",
+        "SPJC",
+        "SKRG",
+        "MSLP",
+        "MHLM"
+    ],
+    "SKMR": [
+        "SKBO",
+        "SKRG"
+    ],
+    "EDDM": [
+        "SKBO"
+    ],
+    "SUMU": [
+        "SKBO"
+    ],
+    "SKMZ": [
+        "SKBO"
+    ],
+    "SKNV": [
+        "SKBO"
+    ],
+    "SECO": [
+        "SEQM"
+    ],
+    "SKPE": [
+        "SKBO"
+    ],
+    "SBPA": [
+        "SPJC"
+    ],
+    "SKPP": [
+        "SKBO"
+    ],
+    "SKPS": [
+        "SKBO",
+        "SKCL"
+    ],
+    "MPTO": [
+        "SKBO",
+        "MSLP",
+        "MROC"
+    ],
+    "MDPC": [
+        "SKBO",
+        "SPJC"
+    ],
+    "SKRH": [
+        "SKBO"
+    ],
+    "MHRO": [
+        "MSLP"
+    ],
+    "MSLP": [
+        "SKBO",
+        "MZBZ",
+        "MMUN",
+        "KDFW",
+        "KEWR",
+        "MGGT",
+        "SEGU",
+        "KIAD",
+        "KIAH",
+        "KJFK",
+        "KLAX",
+        "SPJC",
+        "MMMX",
+        "KMIA",
+        "MPTO",
+        "MHRO",
+        "MHLM",
+        "KSFO",
+        "MROC",
+        "MHTG",
+        "SEQM",
+        "CYYZ"
+    ],
+    "MHLM": [
+        "KJFK",
+        "KMIA",
+        "MSLP",
+        "MHTG"
+    ],
+    "SCEL": [
+        "SKBO",
+        "SPJC"
+    ],
+    "SEST": [
+        "SEGU"
+    ],
+    "MDSD": [
+        "SKBO"
+    ],
+    "KSFO": [
+        "MSLP"
+    ],
+    "MROC": [
+        "SKBO",
+        "MGGT",
+        "SPJC",
+        "MPTO",
+        "MSLP"
+    ],
+    "TJSJ": [
+        "SKBO"
+    ],
+    "SKSM": [
+        "SKBG",
+        "SKBO",
+        "SKRG"
+    ],
+    "SKCO": [
+        "SKBO",
+        "SKCL"
+    ],
+    "MHTG": [
+        "MGGT",
+        "MSLP",
+        "MHLM"
+    ],
+    "SEQM": [
+        "SKBO",
+        "SEGS",
+        "SEGU",
+        "SPJC",
+        "SEMT",
+        "SECO",
+        "MSLP"
+    ],
+    "SKVP": [
+        "SKBO"
+    ],
+    "SKVV": [
+        "SKBO"
+    ],
+    "SLVR": [
+        "SKBO"
+    ],
+    "CYYZ": [
+        "MSLP"
+    ]
+}
