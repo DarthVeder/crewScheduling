@@ -115,19 +115,24 @@ def show_data(network):
     )
     probable_hubs = find_probable_hubs(network)
     logger.info(
-        'possible hubs:\n' +
-        '\n'.join(probable_hubs)
+        'possible hubs: [' +
+        ', '.join(probable_hubs)
+        + ']'
     )
 
     for hub in probable_hubs:
         connections = network.get(hub, None)
         if connections:
-            logger.debug('HUB: {}\n  Destinations: {}'
+            logger.debug('HUB: {}  Destinations: {}'
                          .format(hub, connections))
 
 def format_schedule(flights):
-    header = ['Flight duty       Duty start      Duty end      Dep. time      Arr. Time    Dep.    Arr.',
+    header = ['Flt. Nr.    Dep     Arr     STD(LT)             STA(LT)    Blk. Hrs.    Start      End  ',
               '----------------------------------------------------------------------------------------']
+    #          AT752       GMMN    EGLL    2020-03-01 07:00    10:30      03:30        06:30
+    #          AT775       EGLL    GMMN    2020-03-01 11:25    15:00      06:00
+    #          REPOSITION TO GMME                                         08:30                   16:00
+    #          AT063       GMME    LIML    2020-03-02 10:45    14:45      04:00        14:00
     line = []
     for d, a in flights:
         line.append(
@@ -280,7 +285,3 @@ if __name__ == '__main__':
         schedule = format_schedule(flights)
         print(schedule)
         print()
-
-        # for d, a in flights:
-        #     logger.debug('{}[{}] - {}[{}]'
-        #                  .format(d, visited.get(d, 0), a, visited.get(a, 0)))
