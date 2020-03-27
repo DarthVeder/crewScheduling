@@ -1,43 +1,43 @@
-import logging
-import logging.config
+# import logging
+# import logging.config
 import json
 import argparse
 
-MAJOR = 1
-MINOR = 0
-PATCH = 0
-VERSION = '.'.join(
-    [str(x) for x in [MAJOR, MINOR, PATCH]]
-)
-MAX_HUBS = 10
-MAX_FLIGHTS_IN_SCHEDULE = 5
-
-logging_dict = {
-    'version': 1,
-    'formatters': {
-        'verbose': {
-            'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
-        },
-        'simple': {
-            'format': '%(levelname)s %(message)s'
-        }
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'level': 'INFO',
-            'formatter': 'simple',
-            'stream': 'ext://sys.stdout'
-        }
-    },
-    'loggers': {
-        'bnu': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
-            'propagate': 'no'
-        }
-    }
-}
+# MAJOR = 1
+# MINOR = 0
+# PATCH = 0
+# VERSION = '.'.join(
+#     [str(x) for x in [MAJOR, MINOR, PATCH]]
+# )
+# MAX_HUBS = 10
+# MAX_FLIGHTS_IN_SCHEDULE = 5
+#
+# logging_dict = {
+#     'version': 1,
+#     'formatters': {
+#         'verbose': {
+#             'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
+#         },
+#         'simple': {
+#             'format': '%(levelname)s %(message)s'
+#         }
+#     },
+#     'handlers': {
+#         'console': {
+#             'class': 'logging.StreamHandler',
+#             'level': 'INFO',
+#             'formatter': 'simple',
+#             'stream': 'ext://sys.stdout'
+#         }
+#     },
+#     'loggers': {
+#         'bnu': {
+#             'level': 'DEBUG',
+#             'handlers': ['console'],
+#             'propagate': 'no'
+#         }
+#     }
+# }
 
 
 def read_flightradar_data(file_in):
@@ -66,9 +66,8 @@ def find_probable_hubs(network):
     return list(probable_hubs.keys())
 
 
-def generate_schedule(dep_apt, pilot_network):
+def generate_schedule(dep_apt, pilot_network, visited):
     flights = []
-    visited = {}
     apt = dep_apt
     while len(flights) < MAX_FLIGHTS_IN_SCHEDULE:
         lnetwork = pilot_network.get(apt)
@@ -275,13 +274,16 @@ if __name__ == '__main__':
         logger.error('need from date for generating a schedule')
         exit(1)
 
+    pilot_visited = {}
     apt = assigned_hub
     for n in range(3):
         logger.debug('Schedule {}'.format(n+1))
         logger.debug('From {}'.format(apt))
-        flights, visited, last_apt = generate_schedule(apt, pilot_network)
+        flights, pilot_visited, last_apt = generate_schedule(apt, pilot_network, pilot_visited)
         apt = last_apt
 
         schedule = format_schedule(flights)
         print(schedule)
         print()
+
+    print(pilot_visited)

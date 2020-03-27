@@ -15,10 +15,10 @@ Grade = collections.namedtuple('Grade', 'hours title')
 Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft')
 #Aircraft = collections.namedtuple('Aircraft', 'id name ktas range')
 
-MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
-MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
-FSX_DIRECTORY = './data/'
-MAXIMUM_FLIGHT_TIME_HRS = 14.0
+# MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
+# MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
+# FSX_DIRECTORY = './data/'
+# MAXIMUM_FLIGHT_TIME_HRS = 14.0
 
 def lmt2utc(latitude_deg, lmt):
     deltat = datetime.timedelta(hours=latitude_deg/15.0)
@@ -329,39 +329,39 @@ class Airline:
             print('{2} {3} {0} {1}'.format(datetime.datetime.combine(day, r.time_lt).isoformat(), r.id, r.dep, r.arr))
         print('Total flight time: {} hours'.format(total_ft))
 
-if __name__ == '__main__':
-    import sys
-    load = False
-    if not load:
-        company_config_file = 'RoyalAirMaroc.cfg'
-        company_schedule_file = 'RoyalAirMaroc_schedule.txt'
-        company_fleet_file = 'fleet.yml'
-        
-        new_company = Airline(company_config_file)
-        
-        pilot1 = Pilot('Giovannino Liguori')
-        new_company.assignPilot(pilot1)
-        pilot2 = Pilot('Ibrahim Mustafà')
-        new_company.assignPilot(pilot2)
-
-        new_company.loadFleet(company_fleet_file)
-        new_company.buildRoutes(company_schedule_file)
-        new_company.setActivePilot(pilot1)
-        new_company.assignAircraftToActivePilot()
-        new_company.assignGrade()
-
-        # Saving to file
-        new_company.pickle()
-    else:
-        # To recover from file:
-        new_company = Airline()
-        new_company = Airline.unpickle()
-
-        # new_company.assignAircraftToPilot()
-        # new_company.assignGrade()
-
-    print('Active pilot: {}'.format(new_company.active_pilot.retrieve()))
-
-    new_company.assignRoster()
+# if __name__ == '__main__':
+#     import sys
+#     load = False
+#     if not load:
+#         company_config_file = 'RoyalAirMaroc.cfg'
+#         company_schedule_file = 'RoyalAirMaroc_schedule.txt'
+#         company_fleet_file = 'fleet.yml'
+#
+#         new_company = Airline(company_config_file)
+#
+#         pilot1 = Pilot('Giovannino Liguori')
+#         new_company.assignPilot(pilot1)
+#         pilot2 = Pilot('Ibrahim Mustafà')
+#         new_company.assignPilot(pilot2)
+#
+#         new_company.loadFleet(company_fleet_file)
+#         new_company.buildRoutes(company_schedule_file)
+#         new_company.setActivePilot(pilot1)
+#         new_company.assignAircraftToActivePilot()
+#         new_company.assignGrade()
+#
+#         # Saving to file
+#         new_company.pickle()
+#     else:
+#         # To recover from file:
+#         new_company = Airline()
+#         new_company = Airline.unpickle()
+#
+#         # new_company.assignAircraftToPilot()
+#         # new_company.assignGrade()
+#
+#     print('Active pilot: {}'.format(new_company.active_pilot.retrieve()))
+#
+#     new_company.assignRoster()
 
  

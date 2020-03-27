@@ -1,14 +1,16 @@
 import sys
-sys.path.append("..")
+sys.path.append("./crewScheduling")
 
 from airline import Airline
-import pytest
 
 new_company=None
 
+
 def setup_module(module):
     global new_company
+
     new_company = Airline('data\\RoyalAirMaroc.cfg')
+
 
 def test_loadFleet():
     new_company.loadFleet('data\\fleet.yml')
