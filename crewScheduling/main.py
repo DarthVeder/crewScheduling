@@ -7,13 +7,14 @@ Licence: GNU 3.0
 
 import collections
 import logging.config
+import argparse
 
 MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
 MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = './data/'
 MAXIMUM_FLIGHT_TIME_HRS = 14.0
 
-MAJOR = 1
+MAJOR = 2
 MINOR = 0
 PATCH = 0
 VERSION = '.'.join(
@@ -22,36 +23,68 @@ VERSION = '.'.join(
 MAX_HUBS = 10
 MAX_FLIGHTS_IN_SCHEDULE = 5
 
-logging_dict = {
+LOGGING_DICT = {
     'version': 1,
     'formatters': {
         'verbose': {
-            'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
+            'format': '[%(levelname)s], %(asctime)s, %(module)s, %(name)s, %(message)s'  # noqa: E501
         },
         'simple': {
-            'format': '%(levelname)s %(message)s'
+            'format': '[%(levelname)s] %(message)s'
         }
     },
     'handlers': {
-        'console': {
+        'console_handler': {
             'class': 'logging.StreamHandler',
-            'level': 'INFO',
+            'level': logging.INFO,
             'formatter': 'simple',
             'stream': 'ext://sys.stdout'
+        },
+        'file_handler': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'formatter': 'verbose',
+            'level': logging.INFO,
+            'maxBytes': 1000000,
+            'filename': 'crew_scheduler.log'
         }
     },
     'loggers': {
-        'scheduler': {
-            'level': 'DEBUG',
-            'handlers': ['console'],
+        'crew_scheduler': {
+            'level': logging.DEBUG,
+            'handlers': ['console_handler', 'file_handler'],
             'propagate': 'no'
         }
     }
 }
 
+logging.config.dictConfig(LOGGING_DICT)
+logger = logging.getLogger('crew_scheduler')
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='crew scheduler'
+    )
+    parser.add_argument(
+        '--log-level',
+        dest='log_level',
+        choices=['info', 'debug'],
+        default='info'
+    )
+    parser.add_argument(
+        '--log-dir',
+        dest='log_dir',
+        default=r'C:\home\FSXTools\crewScheduling\crewScheduling'
+    )
+    args = parser.parse_args()
+    if args.log_level == 'debug':
+        LOGGING_DICT['handlers']['console_handler']['level'] = logging.DEBUG
+
+    logging.config.dictConfig(LOGGING_DICT)
+    logger = logging.getLogger('crew_scheduler')
+    logger.info('starting')
+    logger.debug('ola')
+
     load = False
     if not load:
         company_config_file = 'RoyalAirMaroc.cfg'

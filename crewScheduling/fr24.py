@@ -1,43 +1,9 @@
-# import logging
-# import logging.config
+import logging
 import json
 import argparse
 
-# MAJOR = 1
-# MINOR = 0
-# PATCH = 0
-# VERSION = '.'.join(
-#     [str(x) for x in [MAJOR, MINOR, PATCH]]
-# )
-# MAX_HUBS = 10
-# MAX_FLIGHTS_IN_SCHEDULE = 5
-#
-# logging_dict = {
-#     'version': 1,
-#     'formatters': {
-#         'verbose': {
-#             'format': '%(asctime)s - %(module)s - %(name)s - %(levelname)s - %(message)s'  # noqa: E501
-#         },
-#         'simple': {
-#             'format': '%(levelname)s %(message)s'
-#         }
-#     },
-#     'handlers': {
-#         'console': {
-#             'class': 'logging.StreamHandler',
-#             'level': 'INFO',
-#             'formatter': 'simple',
-#             'stream': 'ext://sys.stdout'
-#         }
-#     },
-#     'loggers': {
-#         'bnu': {
-#             'level': 'DEBUG',
-#             'handlers': ['console'],
-#             'propagate': 'no'
-#         }
-#     }
-# }
+
+logger = logging.getLogger('crew_scheduler.' + __name__)
 
 
 def read_flightradar_data(file_in):
