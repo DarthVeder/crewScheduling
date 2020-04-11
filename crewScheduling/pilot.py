@@ -8,7 +8,7 @@ License: GPL 3.0
 
 
 class Pilot:
-    def __init__(self, name = None):
+    def __init__(self, name=None):
         self.name = name
         self.grade = None
         self.aircraft = None
@@ -20,7 +20,7 @@ class Pilot:
 
     def retrieve(self):
         return self.name, self.aircraft, self.grade, self.hours, self.hub
-        
+
 
 if __name__ == '__main__':
 

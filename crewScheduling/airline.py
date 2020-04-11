@@ -292,42 +292,58 @@ class Airline:
         dep_airport = self.hub
 
         # selective only flights for current active pilot aircraft
-        flights = [f for f in self.getAllConnectionsFrom(dep_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+        flights = [f for f in self.getAllConnectionsFrom(dep_airport)
+                   if active_pilot_acft_id in list(f.aircraft.keys())]
         # suffling flights
-        #random.shuffle(flights)
+        # random.shuffle(flights)
 
         day = datetime.date.today()
-        delta = datetime.timedelta(hours=1)  # time before first presentation at crew dispatcher
+        delta = datetime.timedelta(hours=1)
+        # time before first presentation at crew dispatcher
         flight_departure = datetime.datetime.combine(day, flights[0].time_lt)
         arr_airport = flights[0].arr
         start_roster_time = flight_departure - delta
-        dep_utc_time = lmt2utc(self.getAirportLongitude(dep_airport), flight_departure)
-        print('Start roster (all times are LMT): {}'.format(start_roster_time.isoformat()))
+        dep_utc_time = lmt2utc(self.getAirportLongitude(dep_airport),
+                               flight_departure)
+        print('Start roster (all times are LMT): {}'
+              .format(start_roster_time.isoformat()))
         speed = self.getAircraftKtas(self.getActivePilotAircraft())
         ft = flights[0].distance/speed
-        print('{} {} {} {}'.format(flights[0].dep, flights[0].arr, dep_utc_time, flights[0].id))
+        print(
+            '{} {} {} {}'
+            .format(flights[0].dep, flights[0].arr,
+                    dep_utc_time, flights[0].id))
         del flights[0]  # first flight is starting flight. Removing from list.
 
         roster = []
         build_roster = True
         total_ft = ft
-        flights = [f for f in self.getAllConnectionsFrom(arr_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+        flights = [f for f in self.getAllConnectionsFrom(arr_airport)
+                   if active_pilot_acft_id in list(f.aircraft.keys())]
         while build_roster:
             flight = random.choice(flights)
             ft = flight.distance/speed
             arr_utc_time = dep_utc_time + datetime.timedelta(hours=ft)
-            #arr_lmt_time = utc2lmt(self.getAirportLongitude(flight.arr), arr_utc_time)
-            total_ft = total_ft + (arr_utc_time - dep_utc_time).total_seconds()/3600.0
+            # arr_lmt_time =
+            # utc2lmt(self.getAirportLongitude(flight.arr), arr_utc_time)
+            total_ft = total_ft \
+                + (arr_utc_time - dep_utc_time).total_seconds()/3600.0
             new_dep_airport = flight.arr
             if total_ft < MAXIMUM_FLIGHT_TIME_HRS:
                 roster.append(flight)
-                #print(ft)
-                flights = [f for f in self.getAllConnectionsFrom(new_dep_airport) if active_pilot_acft_id in list(f.aircraft.keys())]
+                # print(ft)
+                flights = \
+                    [f for f in self.getAllConnectionsFrom(new_dep_airport)
+                     if active_pilot_acft_id in list(f.aircraft.keys())]
             else:
                 build_roster = False
 
         for r in roster:
-            print('{2} {3} {0} {1}'.format(datetime.datetime.combine(day, r.time_lt).isoformat(), r.id, r.dep, r.arr))
+            print(
+                '{2} {3} {0} {1}'
+                .format(datetime.datetime.combine(day, r.time_lt).isoformat(),
+                        r.id, r.dep, r.arr)
+            )
         print('Total flight time: {} hours'.format(total_ft))
 
 # if __name__ == '__main__':
@@ -364,5 +380,3 @@ class Airline:
 #     print('Active pilot: {}'.format(new_company.active_pilot.retrieve()))
 #
 #     new_company.assignRoster()
-
- 

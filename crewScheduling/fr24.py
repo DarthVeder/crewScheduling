@@ -94,6 +94,7 @@ def show_data(network):
             logger.debug('HUB: {}  Destinations: {}'
                          .format(hub, connections))
 
+
 def format_schedule(flights):
     header = ['Flt. Nr.    Dep     Arr     STD(LT)             STA(LT)    Blk. Hrs.    Start      End  ',
               '----------------------------------------------------------------------------------------']
@@ -225,7 +226,7 @@ if __name__ == '__main__':
         assigned_hub = random.choice(hubs)
 
     if assigned_hub not in hubs:
-       logger.error('assigned hub "{}" not in company hubs "{}'
+        logger.error('assigned hub "{}" not in company hubs "{}'
                     .format(assigned_hub, ' '.join(hubs)))
     logger.info('Assigned hub: {}'.format(assigned_hub))
 
@@ -248,7 +249,8 @@ if __name__ == '__main__':
     for n in range(3):
         logger.debug('Schedule {}'.format(n+1))
         logger.debug('From {}'.format(apt))
-        flights, pilot_visited, last_apt = generate_schedule(apt, pilot_network, pilot_visited)
+        flights, pilot_visited, last_apt = \
+            generate_schedule(apt, pilot_network, pilot_visited)
         apt = last_apt
 
         schedule = format_schedule(flights)

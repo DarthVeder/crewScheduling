@@ -1,10 +1,9 @@
 from datetime import datetime, timedelta
 import pytz
-from datetime import timedelta
 
 
 dep_tz = pytz.timezone('US/Eastern')
-atd_lt = datetime(year=2019,month=11, day=15,
+atd_lt = datetime(year=2019, month=11, day=15,
                   hour=9, minute=15, tzinfo=dep_tz)
 zulu = pytz.utc
 print('DEP')
@@ -22,7 +21,7 @@ print('{}:{}'.format(ata_z.hour, ata_z.minute))
 from tzwhere import tzwhere
 
 tz = tzwhere.tzwhere()
-arrival_zone = tz.tzNameAt(30.850307,75.961716)
+arrival_zone = tz.tzNameAt(30.850307, 75.961716)
 
 ata_lt = ata_z.astimezone(pytz.timezone(arrival_zone))
 print('LT {}'.format(ata_lt))
