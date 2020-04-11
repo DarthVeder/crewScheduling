@@ -8,11 +8,8 @@ Licence: GNU 3.0
 import collections
 import logging.config
 import argparse
-
-MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
-MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
-FSX_DIRECTORY = './data/'
-MAXIMUM_FLIGHT_TIME_HRS = 14.0
+from pilot import Pilot
+from airline import Airline
 
 MAJOR = 2
 MINOR = 0
@@ -20,8 +17,6 @@ PATCH = 0
 VERSION = '.'.join(
     [str(x) for x in [MAJOR, MINOR, PATCH]]
 )
-MAX_HUBS = 10
-MAX_FLIGHTS_IN_SCHEDULE = 5
 
 LOGGING_DICT = {
     'version': 1,
@@ -77,19 +72,22 @@ if __name__ == '__main__':
         default=r'C:\home\FSXTools\crewScheduling\crewScheduling'
     )
     args = parser.parse_args()
-    if args.log_level == 'debug':
-        LOGGING_DICT['handlers']['console_handler']['level'] = logging.DEBUG
+    try:
+        if args.log_level == 'debug':
+            LOGGING_DICT['handlers']['console_handler']['level'] = logging.DEBUG
+    except Exception as e:
+        print(e)
+        exit(1)
 
     logging.config.dictConfig(LOGGING_DICT)
     logger = logging.getLogger('crew_scheduler')
     logger.info('starting')
-    logger.debug('ola')
 
     load = False
     if not load:
-        company_config_file = 'RoyalAirMaroc.cfg'
-        company_schedule_file = 'RoyalAirMaroc_schedule.txt'
-        company_fleet_file = 'fleet.yml'
+        company_config_file = r'..\data\royal_air_maroc\RoyalAirMaroc.cfg'
+        company_schedule_file = r'..\data\royal_air_maroc\RoyalAirMaroc_schedule.txt'
+        company_fleet_file = r'..\data\royal_air_maroc\fleet.yml'
 
         new_company = Airline(company_config_file)
 

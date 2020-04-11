@@ -8,7 +8,7 @@ License: GPL 3.0
 
 
 class Pilot:
-    def  __init__(self, name = None):
+    def __init__(self, name = None):
         self.name = name
         self.grade = None
         self.aircraft = None

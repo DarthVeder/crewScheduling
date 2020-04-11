@@ -2,6 +2,9 @@ import logging
 import json
 import argparse
 
+MAX_HUBS = 10
+MAX_FLIGHTS_IN_SCHEDULE = 5
+
 
 logger = logging.getLogger('crew_scheduler.' + __name__)
 
