@@ -2,6 +2,7 @@ import logging
 import logging.config
 import json
 import argparse
+import random
 
 MAJOR = '1'
 MINOR = '0'
@@ -146,6 +147,33 @@ def show_data(network):
 #
 #     return text
 
+def generate_timetable(network, hubs):
+    # Even flights number out from hubs, odd into hubs
+    # if hub -> hub win the odd
+    random.seed()
+    flight_number = 200
+    flights = []
+    for apt in network:
+        dep = apt
+        if dep in hubs:
+            if flight_number%2 != 0:  # odd, mak even
+                flight_number += 1
+        for c in network[apt]:
+            number_of_flights = random.randint(1,5)
+            if c in hubs:
+                if flight_number%2 == 0: # even, make odd
+                    flight_number += 1
+            for n in range(number_of_flights):
+                etd = '{:02d}{:02d}'.format(
+                    random.randrange(0, 24, 1),
+                    random.randrange(0, 60, 5)
+                )
+                flight = ('AV{}'.format(flight_number), dep, c, etd)
+                flights.append(flight)
+                flight_number += 1
+
+    return flights
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
@@ -266,7 +294,10 @@ if __name__ == '__main__':
         hubs = find_probable_hubs(network)
         logger.info('proposed hubs: {}'.format(' '.join(hubs)))
 
-    # assigned_hub = 'SPJC'
+    assigned_hub = 'SPJC'
+    flights = generate_timetable(network, hubs)
+    logger.info(flights)
+
     # assigned_hub = None
     # if not assigned_hub:
     #     logger.info('assigning random hub')
