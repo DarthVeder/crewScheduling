@@ -168,11 +168,28 @@ def generate_timetable(network, hubs):
                     random.randrange(0, 24, 1),
                     random.randrange(0, 60, 5)
                 )
-                flight = ('AV{}'.format(flight_number), dep, c, etd)
+                flight = {
+                    'number': '{}'.format(flight_number),
+                    'dep': dep,
+                    'arr': c,
+                    'etd_lt': etd
+                }
                 flights.append(flight)
                 flight_number += 1
 
     return flights
+
+
+def export_fsc_format(flights):
+    header = '; Generated with flight_generator by MM'
+    exported = [header]
+    for f in flights:
+        flight = 'Flight={flt},{dep},{arr},{size},{etd},0,,,,,'\
+                 .format(flt=f['number'], dep=f['dep'], arr=f['arr'],
+                         etd=f['etd_lt'], size=0)
+        exported.append(flight)
+
+    return '\n'.join(exported)
 
 
 if __name__ == '__main__':
@@ -297,6 +314,13 @@ if __name__ == '__main__':
     assigned_hub = 'SPJC'
     flights = generate_timetable(network, hubs)
     logger.info(flights)
+
+    logger.info('exporting flights to "{}"'
+                .format('crewScheduling/flight_generator/schedule.txt'))
+    schedule = export_fsc_format(flights)
+    fout = open('crewScheduling/flight_generator/schedule.txt', 'w')
+    fout.write(schedule)
+    fout.close()
 
     # assigned_hub = None
     # if not assigned_hub:
