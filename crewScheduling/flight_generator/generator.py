@@ -4,7 +4,7 @@ import json
 import argparse
 import random
 
-MAJOR = '1'
+MAJOR = '2'
 MINOR = '0'
 PATCH = '0'
 VERSION = '.'.join([MAJOR, MINOR, PATCH])
@@ -44,6 +44,7 @@ LOGGING_DICT = {
 }
 
 MAX_HUBS = 10
+MAX_FLIGHTS = 1
 # MAX_FLIGHTS_IN_SCHEDULE = 5
 
 
@@ -118,9 +119,8 @@ def show_data(network):
     )
     probable_hubs = find_probable_hubs(network)
     logger.info(
-        'possible hubs: [' +
-        ', '.join(probable_hubs)
-        + ']'
+        'possible hubs: [{}]'
+        .format(', '.join(probable_hubs))
     )
 
     for hub in probable_hubs:
@@ -147,20 +147,19 @@ def show_data(network):
 #
 #     return text
 
-def generate_timetable(network, hubs):
-    # Even flights number out from hubs, odd into hubs
-    # if hub -> hub win the odd
-    random.seed()
+def generate_timetable(hub, network):
+    # Even flights number out from assigned_hub hub, odd into assigned_hub
+    # if assigned_hub -> hubs wins the odd
     flight_number = 200
     flights = []
     for apt in network:
         dep = apt
-        if dep in hubs:
+        if dep == hub:
             if flight_number%2 != 0:  # odd, mak even
                 flight_number += 1
         for c in network[apt]:
-            number_of_flights = random.randint(1,5)
-            if c in hubs:
+            number_of_flights = random.randint(1,MAX_FLIGHTS)
+            if c == hub:
                 if flight_number%2 == 0: # even, make odd
                     flight_number += 1
             for n in range(number_of_flights):
@@ -180,9 +179,34 @@ def generate_timetable(network, hubs):
     return flights
 
 
-def export_fsc_format(flights):
-    header = '; Generated with flight_generator by MM'
-    exported = [header]
+def purge_other_hubs_connections(assigned_hub, hubs, network):
+    new_network = network.copy()
+    other_hubs = [h for h in hubs if h != assigned_hub]
+    to_remove = {}
+    for hub in other_hubs:
+        destinations = []
+        for d in [x for x in network[hub] if x != assigned_hub]:
+            new_network[hub].remove(d)
+            if hub in network[d]:
+                destinations.append(d)
+
+        if new_network[hub] == []:
+            del new_network[hub]
+
+        to_remove[hub] = destinations
+
+    for hub, dests in to_remove.items():
+        for d in dests:
+            new_network[d].remove(hub)
+
+    return new_network
+
+
+def export_fsc_format(assigned_hub, flights):
+    header1 = '; {} generated flights with generator'\
+        .format(len(flights))
+    header2 = '; hub: {}'.format(assigned_hub)
+    exported = [header1, header2]
     for f in flights:
         flight = 'Flight={flt},{dep},{arr},{size},{etd},0,,,,,'\
                  .format(flt=f['number'], dep=f['dep'], arr=f['arr'],
@@ -196,7 +220,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Building airline network from Flightradar24 json file.'
     )
-
     parser.add_argument(
         '--version',
         default='%(prog)s {}'.format(VERSION),
@@ -222,6 +245,11 @@ if __name__ == '__main__':
         default=r'C:\home\FSXTools\crewScheduling\crewScheduling\flight_generator'
     )
     parser.add_argument(
+        '--hub',
+        dest='hub',
+        default=None
+    )
+    parser.add_argument(
         '-i',
         dest='file_in',
         default=None,
@@ -240,16 +268,6 @@ if __name__ == '__main__':
         default=None,
         dest='file_network_out'
     )
-    # parser.add_argument(
-    #     '--from',
-    #     dest='from_date',
-    #     default=None
-    # )
-    # parser.add_argument(
-    #     '--to',
-    #     dest='to_date',
-    #     default=None
-    # )
 
     args = parser.parse_args()
 
@@ -264,15 +282,16 @@ if __name__ == '__main__':
         if args.log_dir:
             filename = LOGGING_DICT['handlers']['file_handler']['filename']
             LOGGING_DICT['handlers']['file_handler']['filename'] = \
-                '{}\{}'.format(args.log_dir, filename)
-
-        logging.config.dictConfig(LOGGING_DICT)
-        logger = logging.getLogger('flight_generator')
+                r'{}\{}'.format(args.log_dir, filename)
 
     except Exception as e:
         print(e)
         exit(1)
 
+    random.seed()
+
+    logging.config.dictConfig(LOGGING_DICT)
+    logger = logging.getLogger('flight_generator')
     logger.info('staring building network')
     logger.debug('args: {}'.format(args))
 
@@ -299,25 +318,37 @@ if __name__ == '__main__':
             json.dump(network, fout, indent=4)
             fout.close()
         except Exception as e:
-            logger.error('error in writing json network file "{}". {}'
+            logger.error('error in writing json network file "{}". err={}'
                          .format(args.file_network_out, str(e)))
-    # import random
 
-    # random.seed()
+
     # hubs = ['SKBO', 'MSLP', 'SPJC', 'MROC', 'SEQM']
     hubs = None
     if not hubs:
-        logger.info('no hub data. Guessing hubs')
+        random.seed()
+        logger.info('no prescribed hub. Guessing hubs')
         hubs = find_probable_hubs(network)
         logger.info('proposed hubs: {}'.format(' '.join(hubs)))
 
-    assigned_hub = 'SPJC'
-    flights = generate_timetable(network, hubs)
-    logger.info(flights)
+    if args.hub:
+        assigned_hub = args.hub
+        logger.info('assigned hub {}'.format(assigned_hub))
+    else:
+        assigned_hub = random.choice(hubs)
+        logger.info('random assigned hub {}'.format(assigned_hub))
+
+    network = purge_other_hubs_connections(assigned_hub, hubs, network)
+
+    flights = generate_timetable(assigned_hub, network)
+    logger.debug(flights)
+    fout = open('tmp.txt', 'w')
+    json.dump(network, fout, indent=4)
+    fout.close()
+
 
     logger.info('exporting flights to "{}"'
                 .format('crewScheduling/flight_generator/schedule.txt'))
-    schedule = export_fsc_format(flights)
+    schedule = export_fsc_format(assigned_hub, flights)
     fout = open('crewScheduling/flight_generator/schedule.txt', 'w')
     fout.write(schedule)
     fout.close()
