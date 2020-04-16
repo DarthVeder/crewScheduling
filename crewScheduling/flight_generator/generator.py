@@ -3,6 +3,7 @@ import logging.config
 import json
 import argparse
 import random
+from copy import deepcopy
 
 MAJOR = '2'
 MINOR = '0'
@@ -180,26 +181,30 @@ def generate_timetable(hub, network):
 
 
 def purge_other_hubs_connections(assigned_hub, hubs, network):
-    new_network = network.copy()
+    new_network = deepcopy(network)
     other_hubs = [h for h in hubs if h != assigned_hub]
-    to_remove = {}
     for hub in other_hubs:
-        destinations = []
-        for d in [x for x in network[hub] if x != assigned_hub]:
+        for d in [x for x in new_network[hub] if x != assigned_hub]:
             new_network[hub].remove(d)
-            if hub in network[d]:
-                destinations.append(d)
+            if hub in new_network.get(d, []):
+                new_network[d].remove(hub)
+                if len(new_network[d]) == 0:
+                    del new_network[d]
 
-        if new_network[hub] == []:
+
+    if len(new_network[hub]) == 0:
             del new_network[hub]
 
-        to_remove[hub] = destinations
-
-    for hub, dests in to_remove.items():
-        for d in dests:
-            new_network[d].remove(hub)
-
     return new_network
+
+
+def make_gcmap_string(network):
+    text = []
+    for a, dests in network.items():
+        for d in dests:
+            text.append('-'.join([a, d]))
+
+    return ','.join(text)
 
 
 def export_fsc_format(assigned_hub, flights):
@@ -338,6 +343,7 @@ if __name__ == '__main__':
         logger.info('random assigned hub {}'.format(assigned_hub))
 
     network = purge_other_hubs_connections(assigned_hub, hubs, network)
+    logger.debug('gcmap: {}'.format(make_gcmap_string(network)))
 
     flights = generate_timetable(assigned_hub, network)
     logger.debug(flights)
