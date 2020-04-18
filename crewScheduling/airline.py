@@ -16,6 +16,7 @@ Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft'
 # Aircraft = collections.namedtuple('Aircraft', 'id name ktas range')
 
 MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
+MINIMUM_FLIGHT_PERCENT_DISTANCE= 10
 MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = r'..\data\FSX'
 MAXIMUM_FLIGHT_TIME_HRS = 14.0
@@ -33,6 +34,67 @@ def utc2lmt(latitude_deg, utc):
     lmt = utc + deltat
 
     return lmt
+
+
+def load_fleet(fleet_file):
+    # Parsing Fleet file and saving the fleet in dictionary aircrafts.
+    # Usage: aircrafts[id]['name' or 'ktas' or 'range']
+    logger.info('loading fleet')
+    with open(fleet_file, 'r') as file:
+        aircrafts = yaml.full_load(file)
+    logger.debug('read {} aircrafts'.format(len(aircrafts)))
+    for a, data in aircrafts.items():
+        logger.debug(
+            'aicraft {}, data {}'
+                .format(a, data)
+        )
+    logger.info('done')
+
+    return aircrafts
+
+
+def find_min_range_aircraft(aircrafts):
+    min_range = None
+    for id, a in aircrafts.items():
+        if not min_range:
+            min_range = a
+        else:
+            if a['range'] < min_range['range']:
+                min_range = a
+
+    logger.debug(
+        'aircraft with minimum range {}'
+        .format(min_range)
+    )
+
+    return min_range
+
+
+def assign_aircraft_to_route(aircrafts, distance_to_fly, default_aircraft):
+    regulated_distance = 1.1 * distance_to_fly  # 10% margin to include challenging airports
+    # Loop on all aircrafts and select all that can make this distance
+    proposed_aircrafts = {}
+    for (ida, aircraft) in aircrafts.items():
+        if aircraft['range'] >= regulated_distance \
+                >= aircraft['range'] * MINIMUM_FLIGHT_PERCENT_DISTANCE / 100:
+            # if aircraft['range'] >= regulated_distance \
+            #         >= aircraft['ktas'] * MINIMUM_FLIGHT_TIME_DISTANCE_HRS:
+            proposed_aircrafts[ida] = aircraft['name']
+
+    if len(proposed_aircrafts) == 0:
+        logger.warning('no aircraft assigned, assigning default aircraft')
+        logger.warning(
+            'regulated distance: {}'
+                .format(regulated_distance)
+        )
+        proposed_aircrafts = default_aircraft
+
+    logger.debug(
+        'distance {}, proposed aicraft {}'
+            .format(regulated_distance, proposed_aircrafts)
+    )
+
+    return proposed_aircrafts
 
 
 class Airline:
@@ -74,8 +136,9 @@ class Airline:
                 logger.error('add "SCHEDULE" path key in company cfg file')
                 exit(1)
 
-            self._load_fleet(config['DEFAULT'].get('fleet'))
-            self._build_routes(config['DEFAULT'].get('schedule'))
+            self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
+            self.default_aircraft = find_min_range_aircraft(self.aircrafts)
+            self._build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
         self.hub = hub
 
@@ -95,37 +158,9 @@ class Airline:
         return (self.name, self.code, [x.get_data() for x in self.pilots],
                 self.grades, self.aircrafts, self.flights)
 
-    @staticmethod
-    def _assign_aircraft_to_route(aircrafts, distance_to_fly):
-        regulated_distance = 1.1 * distance_to_fly # 10% margin to include challenging airports
-        # Loop on all aircrafts and select all that can make this distance
-        proposed_aircrafts = {}
-
-        for (ida, aircraft) in aircrafts.items():
-            # the 5/60*ktas is to avoid huge aircraft assigned to small routes
-            if aircraft['range'] >= regulated_distance \
-                    >= aircraft['ktas'] * MINIMUM_FLIGHT_TIME_DISTANCE_HRS:
-                proposed_aircrafts[ida] = aircraft['name']
-
-        return proposed_aircrafts
-
     def _get_airport_longitude(self, icao):
         return self.airports[icao][1]
 
-    def _load_fleet(self, fleet_file):
-        # Parsing Fleet file and saving the fleet in dictionary aircrafts.
-        # Usage: aircrafts[id]['name' or 'ktas' or 'range']
-        logger.info('loading fleet')
-        with open(fleet_file, 'r') as file:
-            aircrafts = yaml.full_load(file)
-        self.aircrafts = aircrafts
-        logger.debug('read {} aircrafts'.format(len(aircrafts)))
-        for a, data in aircrafts.items():
-            logger.debug(
-                'aicraft {}, data {}'
-                .format(a, data)
-            )
-        logger.info('done')
 
     def show_aircraft(self):
         for a, data in self.aicrafts:
@@ -160,15 +195,9 @@ class Airline:
         logger.debug("building routes")
         # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
         # dictionary. Usage: airports[icao] = (lat, lon)
-        file = 'r5.csv'
+        file = 'r5.csv' #  runways.xml
         logger.debug('reading FSX data file {}'.format(file))
-        with open(FSX_DIRECTORY + os.sep + file, 'r') as fin:
-            for line in fin:
-                # Inserting only the first runway and its lat, lon. It is assumed 
-                # the airport has the same coordinates as the runway.
-                (icao, hdg, lat, lon, *trash ) = line.split(',')
-                if icao not in self.airports:
-                    self.airports[icao] = (float(lat), float(lon))
+        self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
                     
         # Reading full flight schedule from FSC scheduling file
         comments = [';']
@@ -181,17 +210,18 @@ class Airline:
         key = 0
         with open(file_schedule, 'r') as fin:
             for line in fin:
-                line = line.rstrip() # Removing final \n in line
+                line = line.rstrip()  # Removing final \n in line
                 if line[0] not in comments:
                     flight_text = line.split('=')[1]
                     (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
-                    # other can contain other flight info, so it should be checked
+                    # other can contain unsed flight info, so it should be checked
                     Pdep = Point(self.airports[dep][0], self.airports[dep][1])
                     Parr = Point(self.airports[arr][0], self.airports[arr][1])
                     D = distance(Pdep, Parr)
+                    aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                     flight = Flight(id=flight_number, arr=arr, dep=dep,
                                     time_lt=datetime.time(hour=int(hhmm_lt[0:2]), minute=int(hhmm_lt[2:])),
-                                    distance=D, aircraft=None)
+                                    distance=D, aircraft=aircrafts)
                     flights[key] = flight
                     key = key + 1
         
@@ -200,9 +230,10 @@ class Airline:
                         arr = new_flights[0]
                         Parr = Point(self.airports[arr][0], self.airports[arr][1])
                         D = distance(Pdep, Parr)
+                        aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                         flight = Flight(id=flight_number, dep=arr, arr=arr,
                                         time_lt=datetime.time(hour=17, minute=0),
-                                        distance=D, aircraft=None)
+                                        distance=D, aircraft=aircrafts)
                         flights[key] = flight
                         key = key + 1
                         for i in range(1, len(new_flights)):
@@ -211,14 +242,14 @@ class Airline:
                             Pdep = Point(self.airports[dep][0], self.airports[dep][1])
                             Parr = Point(self.airports[arr][0], self.airports[arr][1])
                             D = distance(Pdep, Parr)
-                            aircrafts = self._assign_aircraft_to_route(self.aircrafts, D)
+                            aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                             aircraft_id = list(aircrafts.keys())[0]
                             ktas = self.get_aircraft_ktas(aircraft_id)
                             dep_time = ceil(MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS+ceil(D/ktas))
 
                             flight = Flight(id=flight_number, dep=dep, arr=arr,
                                             time_lt=datetime.time(hour=dep_time, minute=0),
-                                            distance=D, aircraft=None)
+                                            distance=D, aircraft=aircrafts)
                             flights[key] = flight
                             key = key + 1
 
@@ -229,7 +260,7 @@ class Airline:
 
             for (k, flight) in flights.items():
                 flight_no, dep, arr, etd_lt, D, _ = flight
-                aircrafts = self._assign_aircraft_to_route(self.aircrafts, D)
+                aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                 line = '{} {} ({} LT)->{} {} nm {}'.format(flight_no, dep, etd_lt, arr, D, aircrafts)
                 fout.write(line+'\n')
                 flights[k] = Flight(id=flight_no, dep=dep, arr=arr, time_lt=etd_lt, distance=D, aircraft=aircrafts)
@@ -377,3 +408,35 @@ class Airline:
                         r.id, r.dep, r.arr)
             )
         logger.debug('Total flight time: {} hours'.format(total_ft))
+
+
+def format_schedule(flights):
+    header = ['Flt. Nr.    Dep     Arr     STD(LT)             STA(LT)    Blk. Hrs.    Start      End  ',
+              '----------------------------------------------------------------------------------------']
+    #          AT752       GMMN    EGLL    2020-03-01 07:00    10:30      03:30        06:30
+    #          AT775       EGLL    GMMN    2020-03-01 11:25    15:00      06:00
+    #          REPOSITION TO GMME                                         08:30                   16:00
+    #          AT063       GMME    LIML    2020-03-02 10:45    14:45      04:00        14:00
+    line = []
+    for d, a in flights:
+        line.append(
+            '{dep}  {arr}'.format(dep=d, arr=a)
+        )
+
+    text = '\n'.join(header + line)
+
+    return text
+
+
+def load_fsx_data(file_fsx):
+    # TODO: use runways.xml and add country information
+    airports = {}
+    with open(file_fsx, 'r') as fin:
+        for line in fin:
+            # Inserting only the first runway and its lat, lon. It is assumed
+            # the airport has the same coordinates as the runway.
+            (icao, hdg, lat, lon, *trash ) = line.split(',')
+            if icao not in airports:
+                airports[icao] = (float(lat), float(lon))
+
+    return airports

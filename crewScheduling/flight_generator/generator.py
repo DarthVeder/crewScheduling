@@ -131,23 +131,6 @@ def show_data(network):
                          .format(hub, len(connections), connections))
 
 
-# def format_schedule(flights):
-#     header = ['Flt. Nr.    Dep     Arr     STD(LT)             STA(LT)    Blk. Hrs.    Start      End  ',
-#               '----------------------------------------------------------------------------------------']
-#     #          AT752       GMMN    EGLL    2020-03-01 07:00    10:30      03:30        06:30
-#     #          AT775       EGLL    GMMN    2020-03-01 11:25    15:00      06:00
-#     #          REPOSITION TO GMME                                         08:30                   16:00
-#     #          AT063       GMME    LIML    2020-03-02 10:45    14:45      04:00        14:00
-#     line = []
-#     for d, a in flights:
-#         line.append(
-#             '{dep}  {arr}'.format(dep=d, arr=a)
-#         )
-#
-#     text = '\n'.join(header + line)
-#
-#     return text
-
 def generate_timetable(hub, network):
     # Even flights number out from assigned_hub hub, odd into assigned_hub
     # if assigned_hub -> hubs wins the odd
