@@ -10,7 +10,6 @@ class Menu:
             self.choices[selection][1](**kwargs)
 
     def check(self, selection):
-        print(selection)
         if selection not in self.choices.keys():
             print('wrong choice')
             return False
@@ -40,11 +39,19 @@ def set_active_pilot(**kwargs):
 
 
 def save(**kwargs):
-    print('save company')
+    kwargs['company'].pickle()
 
 
 def end_menu(**kwargs):
+    save(**kwargs)
     exit(0)
+
+
+def request_roster(**kwargs):
+    if kwargs['company'].get_active_pilot():
+        kwargs['company'].assign_roster()
+    else:
+        print('No active pilot inserted yet!')
 
 
 def change_active_pilot(**kwargs):
@@ -68,6 +75,10 @@ pilot_submenu = Menu({
 
 
 def show_pilot_submenu(**kwargs):
+    if not kwargs['company'].get_pilots():
+        print('No pilots work for the company!')
+        return
+
     while True:
         pilot_submenu.show()
         choice = input('Choice? ')
@@ -79,5 +90,6 @@ main_menu = Menu({
     '2': ('Create Pilots', create_pilot),
     '3': ('Save', save),
     '4': ('Change Active Pilot', show_pilot_submenu),
-    '5': ('Exit', end_menu)
+    '5': ('Request Active Pilot Roster', request_roster),
+    '6': ('Exit', end_menu)
 })

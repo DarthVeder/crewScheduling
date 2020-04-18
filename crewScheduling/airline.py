@@ -1,9 +1,9 @@
 import pickle
-from crewScheduling.pilot import Pilot
 import collections
 import yaml
 import datetime
 import logging
+import random
 import os
 from math import ceil
 from crewScheduling.point import Point, distance
@@ -27,49 +27,57 @@ def lmt2utc(latitude_deg, lmt):
 
     return utc
 
+
 def utc2lmt(latitude_deg, utc):
     deltat = datetime.timedelta(hours=latitude_deg/15.0)
     lmt = utc + deltat
 
     return lmt
 
+
 class Airline:
     def __init__(self, hub=None, config=None):
-        name = config['DEFAULT'].get('NAME', None)
-        code = config['DEFAULT'].get('CODE', None)
-        grades = {}
-        for k, value in config['DEFAULT'].items():
-            if 'paylevel' in k:
-                level = k.split('_')[-1]
-                hours, title = value.split(',')
-                level = int(level)
-                hours = float(hours)
-                grades[level] = Grade(hours=hours, title=title.rstrip())
-        logger.debug(
-            'company name: {}, code: {}, grades: {}'
-            .format(name, code, grades)
-        )
-
-        self.name = name
-        self.code = code
-        self.grades = grades
+        self.name = None
+        self.code = None
+        self.grades = {}
         self.pilots = []
         self.aircrafts = {}
         self.airports = {}
         self.flights = {}
         self.active_pilot = None
         self._routes_tree = {}
+        self.nsave = 0
+
+        if hub and config:
+            name = config['DEFAULT'].get('NAME', None)
+            code = config['DEFAULT'].get('CODE', None)
+            grades = {}
+            for k, value in config['DEFAULT'].items():
+                if 'paylevel' in k:
+                    level = k.split('_')[-1]
+                    hours, title = value.split(',')
+                    level = int(level)
+                    hours = float(hours)
+                    grades[level] = Grade(hours=hours, title=title.rstrip())
+            logger.debug(
+                'company name: {}, code: {}, grades: {}'
+                .format(name, code, grades)
+            )
+            self.name = name
+            self.code = code
+            self.grades = grades
+
+            if not config['DEFAULT'].get('fleet', None):
+                logger.error('add "FLEET" path key in company cfg file')
+                exit(1)
+            if not config['DEFAULT'].get('schedule', None):
+                logger.error('add "SCHEDULE" path key in company cfg file')
+                exit(1)
+
+            self._load_fleet(config['DEFAULT'].get('fleet'))
+            self._build_routes(config['DEFAULT'].get('schedule'))
+
         self.hub = hub
-
-        if not config['DEFAULT'].get('fleet', None):
-            logger.error('add "FLEET" path key in company cfg file')
-            exit(1)
-        if not config['DEFAULT'].get('schedule', None):
-            logger.error('add "SCHEDULE" path key in company cfg file')
-            exit(1)
-
-        self._load_fleet(config['DEFAULT'].get('fleet'))
-        self._build_routes(config['DEFAULT'].get('schedule'))
 
     def show_pilots(self):
         print('company pilots:')
@@ -84,7 +92,7 @@ class Airline:
                 print('{}'.format(p.get_data()))
 
     def get_company_data(self):
-        return (self.name, self.code, [x.get_pilot() for x in self.pilots],
+        return (self.name, self.code, [x.get_data() for x in self.pilots],
                 self.grades, self.aircrafts, self.flights)
 
     @staticmethod
@@ -95,8 +103,8 @@ class Airline:
 
         for (ida, aircraft) in aircrafts.items():
             # the 5/60*ktas is to avoid huge aircraft assigned to small routes
-            if aircraft['range'] >= regulated_distance and \
-                regulated_distance>=aircraft['ktas']*MINIMUM_FLIGHT_TIME_DISTANCE_HRS:
+            if aircraft['range'] >= regulated_distance \
+                    >= aircraft['ktas'] * MINIMUM_FLIGHT_TIME_DISTANCE_HRS:
                 proposed_aircrafts[ida] = aircraft['name']
 
         return proposed_aircrafts
@@ -132,15 +140,21 @@ class Airline:
     def get_aircraft_name(self, aircraft_id):
         return self.aircrafts[aircraft_id]['name']
 
-    # def pickle(self):
-    #     f = open('airline.sts', 'wb')
-    #     pickle.dump(self, f)
-    #     f.close()
+    def pickle(self):
+        file_save = 'airline.{}.sts'.format(self.nsave)
+        self.nsave += 1
+        f = open(file_save, 'wb')
+        pickle.dump(self, f)
+        f.close()
 
-    # @staticmethod
-    # def unpickle():
-    #     with open('airline.sts', 'rb') as f:
-    #         return pickle.load(f)
+    @staticmethod
+    def unpickle(file_save):
+        try:
+            with open(file_save, 'rb') as f:
+                return pickle.load(f)
+        except Exception as e:
+            logger.error('unpickle err={}'.format(e))
+            exit(1)
 
     def _build_routes(self, file_schedule, print_to_file=False):
         logger.debug("building routes")
@@ -234,12 +248,15 @@ class Airline:
         self.flights = flights
         logger.debug('done')
 
-    def _get_all_connectionsFrom(self, airport_icao):
+    def get_all_connections_from(self, airport_icao):
         return self._routes_tree[airport_icao]
 
 # PILOT UTILITIES
     def get_pilots(self):
         return self.pilots
+
+    def get_active_pilot(self):
+        return self.active_pilot
 
     def get_active_pilot_aircraft(self):
         return self.active_pilot.aircraft
@@ -300,7 +317,7 @@ class Airline:
         Minimum After Duty Rest Period for Multi-Time Zone Flights	14 Hours	    18 Hours.
         """
         import time
-        import random
+
         random.seed()
 
         active_pilot_acft_id = self.get_active_pilot_aircraft()

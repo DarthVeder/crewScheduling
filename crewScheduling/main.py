@@ -64,10 +64,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--load',
         '-l',
-        help='load company status',
+        help='load company save file',
         dest='load',
         action='store_true',
         default=False
+    )
+    parser.add_argument(
+        '--load-file',
+        help='company save file to load',
+        dest='file_save',
+        default=None
     )
     parser.add_argument(
         '--log-level',
@@ -110,9 +116,14 @@ if __name__ == '__main__':
     config = configparser.ConfigParser()
     try:
         if args.load:
+            if not args.file_save:
+                logger.error('--load needs --load-file')
+                exit(1)
             logger.info('loading')
-            # new_company = Airline()
-            # new_company = Airline.unpickle()
+            company = Airline.unpickle(args.file_save)
+            print(company.nsave)
+            logger.debug(company.get_company_data())
+            logger.debug('done')
         else:
             logger.info('starting new company')
             with open(args.company, 'r') as fc:
@@ -133,8 +144,8 @@ if __name__ == '__main__':
             company = Airline(args.hub, config)
     except Exception as e:
         logger.error(
-            'error in reading company file {}. err={}'
-            .format(args.company, e)
+            'err={}'
+            .format(e)
         )
         exit(1)
 
@@ -145,36 +156,3 @@ if __name__ == '__main__':
             main_menu.action(choice, company=company)
         except Exception as e:
             print('wrong choice. err={}'.format(e))
-
-    # load = False
-    # if not load:
-    #     company_config_file = r'..\data\royal_air_maroc\RoyalAirMaroc.cfg'
-    #     company_schedule_file = r'..\data\royal_air_maroc\RoyalAirMaroc_schedule.txt'
-    #     company_fleet_file = r'..\data\royal_air_maroc\fleet.yml'
-    #
-    #     new_company = Airline(company_config_file)
-    #
-    #     pilot1 = Pilot('Giovannino Liguori')
-    #     new_company.assignPilot(pilot1)
-    #     pilot2 = Pilot('Ibrahim Mustafà')
-    #     new_company.assignPilot(pilot2)
-    #
-    #     new_company.loadFleet(company_fleet_file)
-    #     new_company.buildRoutes(company_schedule_file)
-    #     new_company.setActivePilot(pilot1)
-    #     new_company.assignAircraftToActivePilot()
-    #     new_company.assignGrade()
-    #
-    #     # Saving to file
-    #     new_company.pickle()
-    # else:
-    #     # To recover from file:
-    #     new_company = Airline()
-    #     new_company = Airline.unpickle()
-
-        # new_company.assignAircraftToPilot()
-        # new_company.assignGrade()
-
-    # print('Active pilot: {}'.format(new_company.active_pilot.retrieve()))
-
-    # new_company.assignRoster()
