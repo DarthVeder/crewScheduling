@@ -238,6 +238,9 @@ class Airline:
         return self._routes_tree[airport_icao]
 
 # PILOT UTILITIES
+    def get_pilots(self):
+        return self.pilots
+
     def get_active_pilot_aircraft(self):
         return self.active_pilot.aircraft
 

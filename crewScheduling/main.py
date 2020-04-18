@@ -130,7 +130,7 @@ if __name__ == '__main__':
                 new_config_str.append(s)
 
             config.read_string('\n'.join(new_config_str))
-            new_company = Airline(args.hub, config)
+            company = Airline(args.hub, config)
     except Exception as e:
         logger.error(
             'error in reading company file {}. err={}'
@@ -142,7 +142,7 @@ if __name__ == '__main__':
         try:
             main_menu.show()
             choice = input('Choice? ')
-            main_menu.action(choice, company=new_company)
+            main_menu.action(choice, company=company)
         except Exception as e:
             print('wrong choice. err={}'.format(e))
 

@@ -10,6 +10,7 @@ class Menu:
             self.choices[selection][1](**kwargs)
 
     def check(self, selection):
+        print(selection)
         if selection not in self.choices.keys():
             print('wrong choice')
             return False
@@ -34,6 +35,10 @@ def create_pilot(**kwargs):
     kwargs['company'].assign_grade()
 
 
+def set_active_pilot(**kwargs):
+    kwargs['company'].set_active_pilot(kwargs['pilot'])
+
+
 def save(**kwargs):
     print('save company')
 
@@ -43,12 +48,22 @@ def end_menu(**kwargs):
 
 
 def change_active_pilot(**kwargs):
-    pass
+    pilots = kwargs['company'].get_pilots()
+    d_pilots = {}
+    for i, p in enumerate(pilots):
+        d_pilots[str(i)] = (p.name, set_active_pilot)
+
+    pilot_lists = Menu(d_pilots)
+    pilot_lists.show()
+    pilot_id = input('Choice? ')
+    pilot_lists.action(pilot_id, company=kwargs['company'],
+                       pilot=pilots[int(pilot_id)])
 
 
 pilot_submenu = Menu({
-    '1': ('Select new active pilot', change_active_pilot),
-    '2': (('Exit', end_menu))
+    '1': ('Select active pilot', change_active_pilot),
+    '2': ('Show Pilots', show_pilots),
+    '3': ('Exit', end_menu)
 })
 
 
@@ -56,7 +71,7 @@ def show_pilot_submenu(**kwargs):
     while True:
         pilot_submenu.show()
         choice = input('Choice? ')
-        main_menu.action(choice, company=new_company)
+        pilot_submenu.action(choice, **kwargs)
 
 
 main_menu = Menu({
