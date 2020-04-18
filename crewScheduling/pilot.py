@@ -1,12 +1,3 @@
-"""
-Class to manage a pilot career.
-
-Author: MM
-Copyright: 2019 -
-License: GPL 3.0
-"""
-
-
 class Pilot:
     def __init__(self, name=None):
         self.name = name
@@ -18,7 +9,7 @@ class Pilot:
     def create(self, name):
         self.name = name
 
-    def retrieve(self):
+    def get_data(self):
         return self.name, self.aircraft, self.grade, self.hours, self.hub
 
 

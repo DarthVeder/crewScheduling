@@ -1,7 +1,4 @@
-import sys
-sys.path.append("./crewScheduling")
-
-from airline import Airline
+from crewScheduling.airline import Airline
 
 new_company=None
 
