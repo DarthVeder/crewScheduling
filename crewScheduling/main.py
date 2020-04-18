@@ -1,6 +1,5 @@
 import logging.config
 import argparse
-from crewScheduling.pilot import Pilot
 from crewScheduling.airline import Airline
 from datetime import datetime, timedelta
 import configparser
@@ -9,7 +8,7 @@ from crewScheduling.menu import main_menu
 logger = logging.getLogger('crew_scheduler')
 
 MAJOR = 3
-MINOR = 0
+MINOR = 1
 PATCH = 0
 VERSION = '.'.join(
     [str(x) for x in [MAJOR, MINOR, PATCH]]
