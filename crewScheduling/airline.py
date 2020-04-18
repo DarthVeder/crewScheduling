@@ -368,9 +368,9 @@ class Airline:
         start_roster_time = flight_departure - delta
         dep_utc_time = lmt2utc(self._get_airport_longitude(dep_airport),
                                flight_departure)
-        print('Start roster (all times are LMT): {}'
+        logger.info('Start roster (all times are LMT): {}'
               .format(start_roster_time.isoformat()))
-        speed = self.getAircraftKtas(self.get_active_pilot_aircraft())
+        speed = self.get_aircraft_ktas(self.get_active_pilot_aircraft())
         ft = flights[0].distance/speed
         logger.debug(
             '{} {} {} {}'
@@ -381,8 +381,10 @@ class Airline:
         roster = []
         build_roster = True
         total_ft = ft
-        flights = [f for f in self.getAllConnectionsFrom(arr_airport)
+        flights = [f for f in self.get_all_connections_from(arr_airport)
                    if active_pilot_acft_id in list(f.aircraft.keys())]
+        print(flights)
+        exit()
         while build_roster:
             flight = random.choice(flights)
             ft = flight.distance/speed
@@ -396,7 +398,7 @@ class Airline:
                 roster.append(flight)
                 # print(ft)
                 flights = \
-                    [f for f in self.getAllConnectionsFrom(new_dep_airport)
+                    [f for f in self.get_all_connections_from(new_dep_airport)
                      if active_pilot_acft_id in list(f.aircraft.keys())]
             else:
                 build_roster = False
