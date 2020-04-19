@@ -26,18 +26,19 @@ class TestLoadFleet(unittest.TestCase):
         logging.disable(logging.NOTSET)
 
     def test_loadFleet(self):
+        logging.disable(logging.CRITICAL)
         load_fleet(r'data\fleet.yml')
+        logging.disable(logging.NOTSET)
 
         self.assertEqual(self.company.aircrafts['B744']['range'], B747_range_ok)
 
-    # @mock.patch("builtins.open",
-    #             mock.mock_open(read_data=schedule_data))
     def test_build_route(self):
         with mock.patch('builtins.open', mock.mock_open(read_data=schedule_data)):
             flights = self.company.build_routes(file_schedule='foo')
 
         for f in flights:
-            print(flights[f])
+            for a in flights[f].aircraft:
+                self.assertGreaterEqual(self.company.get_aircraft_range(a), flights[f].distance)
 
 
 if __name__ == '__main__':

@@ -210,7 +210,6 @@ class Airline:
     def _get_airport_longitude(self, icao):
         return self.airports[icao][1]
 
-
     def show_aircraft(self):
         for a, data in self.aicrafts:
             print(
@@ -223,6 +222,9 @@ class Airline:
 
     def get_aircraft_name(self, aircraft_id):
         return self.aircrafts[aircraft_id]['name']
+
+    def get_aircraft_range(self, aircraft_id):
+        return self.aircrafts[aircraft_id]['range']
 
     def pickle(self):
         file_save = 'airline.{}.sts'.format(self.nsave)
