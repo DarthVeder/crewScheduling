@@ -53,7 +53,7 @@ if __name__ == '__main__':
         description='crew scheduler'
     )
     parser.add_argument(
-        '--company'
+        '--company',
         '-c',
         help='company FSC cfg file',
         dest='company',
