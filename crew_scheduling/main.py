@@ -1,8 +1,8 @@
 import logging.config
 import argparse
-from crewScheduling.airline import Airline
+from crew_scheduling.airline import Airline
 from datetime import datetime, timedelta
-from crewScheduling.menu import main_menu
+from crew_scheduling.menu import main_menu
 
 logger = logging.getLogger('crew_scheduler')
 

@@ -3,7 +3,7 @@ logging.basicConfig(level=logging.DEBUG, format='[%(levelname)s] %(message)s')
 
 import unittest
 from unittest import mock
-from crewScheduling.airline import Airline, load_fleet
+from crew_scheduling.airline import Airline, load_fleet
 
 
 B747_range_ok = 7260
@@ -25,7 +25,7 @@ class TestLoadFleet(unittest.TestCase):
         self.company = Airline(hub='GMMN', config_file=r'data\RoyalAirMaroc.cfg')
         logging.disable(logging.NOTSET)
 
-    def test_loadFleet(self):
+    def test_load_fleet(self):
         logging.disable(logging.CRITICAL)
         load_fleet(r'data\fleet.yml')
         logging.disable(logging.NOTSET)

@@ -7,7 +7,7 @@ import random
 import os
 import configparser
 from math import ceil
-from crewScheduling.point import Point, distance
+from crew_scheduling.point import Point, distance
 
 
 logger = logging.getLogger('crew_scheduler.' + __name__)

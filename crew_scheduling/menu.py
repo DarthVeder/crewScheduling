@@ -1,4 +1,4 @@
-from crewScheduling.pilot import Pilot
+from crew_scheduling.pilot import Pilot
 
 
 class Menu:

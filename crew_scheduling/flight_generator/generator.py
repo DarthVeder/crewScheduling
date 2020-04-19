@@ -336,9 +336,9 @@ if __name__ == '__main__':
 
 
     logger.info('exporting flights to "{}"'
-                .format('crewScheduling/flight_generator/schedule.txt'))
+                .format('crew_scheduling/flight_generator/schedule.txt'))
     schedule = export_fsc_format(assigned_hub, flights)
-    fout = open('crewScheduling/flight_generator/schedule.txt', 'w')
+    fout = open('crew_scheduling/flight_generator/schedule.txt', 'w')
     fout.write(schedule)
     fout.close()
 
