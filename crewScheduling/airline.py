@@ -5,6 +5,7 @@ import datetime
 import logging
 import random
 import os
+import configparser
 from math import ceil
 from crewScheduling.point import Point, distance
 
@@ -36,6 +37,20 @@ def utc2lmt(latitude_deg, utc):
     return lmt
 
 
+def load_fsx_data(file_fsx):
+    # TODO: use runways.xml and add country information
+    airports = {}
+    with open(file_fsx, 'r') as fin:
+        for line in fin:
+            # Inserting only the first runway and its lat, lon. It is assumed
+            # the airport has the same coordinates as the runway.
+            (icao, hdg, lat, lon, *trash ) = line.split(',')
+            if icao not in airports:
+                airports[icao] = (float(lat), float(lon))
+
+    return airports
+
+
 def load_fleet(fleet_file):
     # Parsing Fleet file and saving the fleet in dictionary aircrafts.
     # Usage: aircrafts[id]['name' or 'ktas' or 'range']
@@ -46,7 +61,7 @@ def load_fleet(fleet_file):
     for a, data in aircrafts.items():
         logger.debug(
             'aicraft {}, data {}'
-                .format(a, data)
+            .format(a, data)
         )
     logger.info('done')
 
@@ -90,15 +105,15 @@ def assign_aircraft_to_route(aircrafts, distance_to_fly, default_aircraft):
         proposed_aircrafts = default_aircraft
 
     logger.debug(
-        'distance {}, proposed aicraft {}'
-            .format(regulated_distance, proposed_aircrafts)
+        'distance {}, proposed aircraft {}'
+        .format(regulated_distance, proposed_aircrafts)
     )
 
     return proposed_aircrafts
 
 
 class Airline:
-    def __init__(self, hub=None, config=None):
+    def _empty_init(self):
         self.name = None
         self.code = None
         self.grades = {}
@@ -110,37 +125,71 @@ class Airline:
         self._routes_tree = {}
         self.nsave = 0
 
-        if hub and config:
-            name = config['DEFAULT'].get('NAME', None)
-            code = config['DEFAULT'].get('CODE', None)
-            grades = {}
-            for k, value in config['DEFAULT'].items():
-                if 'paylevel' in k:
-                    level = k.split('_')[-1]
-                    hours, title = value.split(',')
-                    level = int(level)
-                    hours = float(hours)
-                    grades[level] = Grade(hours=hours, title=title.rstrip())
-            logger.debug(
-                'company name: {}, code: {}, grades: {}'
-                .format(name, code, grades)
+    def __init__(self, hub=None, config_file=None):
+        self._empty_init()
+
+        if not hub and not config_file:
+            return
+
+        try:
+            with open(config_file, 'r') as fc:
+                config_str = '[DEFAULT]\n' + fc.read()
+        except Exception as e:
+            logger.error(
+                'problem with Airline config_file {}. '
+                'err={}'
+                .format(config_file, e)
             )
-            self.name = name
-            self.code = code
-            self.grades = grades
+        new_config_str = []
+        for s in config_str.split('\n'):
+            if 'PAYLEVEL' in s:
+                _, num_jump_grade = s.split('=')
+                num, jump, grade = num_jump_grade.split(',')
+                s = '='.join(
+                    ['PAYLEVEL_{}'.format(num),
+                     ','.join([jump, grade])
+                    ]
+                )
+            new_config_str.append(s)
 
-            if not config['DEFAULT'].get('fleet', None):
-                logger.error('add "FLEET" path key in company cfg file')
-                exit(1)
-            if not config['DEFAULT'].get('schedule', None):
-                logger.error('add "SCHEDULE" path key in company cfg file')
-                exit(1)
+        config = configparser.ConfigParser()
+        config.read_string('\n'.join(new_config_str))
 
-            self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
-            self.default_aircraft = find_min_range_aircraft(self.aircrafts)
-            self._build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
+        name = config['DEFAULT'].get('NAME', None)
+        code = config['DEFAULT'].get('CODE', None)
+        grades = {}
+        for k, value in config['DEFAULT'].items():
+            if 'paylevel' in k:
+                level = k.split('_')[-1]
+                hours, title = value.split(',')
+                level = int(level)
+                hours = float(hours)
+                grades[level] = Grade(hours=hours, title=title.rstrip())
+        logger.debug(
+            'company name: {}, code: {}, grades: {}'
+            .format(name, code, grades)
+        )
+        self.name = name
+        self.code = code
+        self.grades = grades
 
+        if not config['DEFAULT'].get('fleet', None):
+            logger.error('add "FLEET" path key in company cfg file')
+            exit(1)
+        if not config['DEFAULT'].get('schedule', None):
+            logger.error('add "SCHEDULE" path key in company cfg file')
+            exit(1)
+
+        # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
+        # dictionary. Usage: airports[icao] = (lat, lon)
+        file = 'r5.csv' #  runways.xml
+        logger.debug('reading FSX data file {}'.format(file))
+        self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
         self.hub = hub
+
+        self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
+        self.default_aircraft = find_min_range_aircraft(self.aircrafts)
+        self.flights = self.build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
     def show_pilots(self):
         print('company pilots:')
@@ -191,14 +240,8 @@ class Airline:
             logger.error('unpickle err={}'.format(e))
             exit(1)
 
-    def _build_routes(self, file_schedule, print_to_file=False):
+    def build_routes(self, file_schedule, print_to_file=False):
         logger.debug("building routes")
-        # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
-        # dictionary. Usage: airports[icao] = (lat, lon)
-        file = 'r5.csv' #  runways.xml
-        logger.debug('reading FSX data file {}'.format(file))
-        self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
-                    
         # Reading full flight schedule from FSC scheduling file
         comments = [';']
         # flights are stored in a dictionary as Flight namedtuple (id, dep, arr, time_lt, distance, aircrafts)
@@ -214,7 +257,11 @@ class Airline:
                 if line[0] not in comments:
                     flight_text = line.split('=')[1]
                     (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
-                    # other can contain unsed flight info, so it should be checked
+                    logging.debug(
+                        'flight nr {}, dep {}, arr {}'
+                        .format(flight_number, dep, arr)
+                    )
+                    # other can contain flight info, so it should be checked
                     Pdep = Point(self.airports[dep][0], self.airports[dep][1])
                     Parr = Point(self.airports[arr][0], self.airports[arr][1])
                     D = distance(Pdep, Parr)
@@ -272,12 +319,12 @@ class Airline:
                 else:
                     self._routes_tree[dep] = [flights[k]]
 
-
             fout.close()
 
         logger.debug('found {} flights'.format(len(flights)))
-        self.flights = flights
         logger.debug('done')
+
+        return flights
 
     def get_all_connections_from(self, airport_icao):
         return self._routes_tree[airport_icao]
@@ -428,17 +475,3 @@ def format_schedule(flights):
     text = '\n'.join(header + line)
 
     return text
-
-
-def load_fsx_data(file_fsx):
-    # TODO: use runways.xml and add country information
-    airports = {}
-    with open(file_fsx, 'r') as fin:
-        for line in fin:
-            # Inserting only the first runway and its lat, lon. It is assumed
-            # the airport has the same coordinates as the runway.
-            (icao, hdg, lat, lon, *trash ) = line.split(',')
-            if icao not in airports:
-                airports[icao] = (float(lat), float(lon))
-
-    return airports

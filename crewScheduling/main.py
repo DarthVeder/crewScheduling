@@ -2,7 +2,6 @@ import logging.config
 import argparse
 from crewScheduling.airline import Airline
 from datetime import datetime, timedelta
-import configparser
 from crewScheduling.menu import main_menu
 
 logger = logging.getLogger('crew_scheduler')
@@ -54,7 +53,7 @@ if __name__ == '__main__':
         description='crew scheduler'
     )
     parser.add_argument(
-        '--company',
+        '--company'
         '-c',
         help='company FSC cfg file',
         dest='company',
@@ -112,7 +111,6 @@ if __name__ == '__main__':
     logger.info('starting')
     logger.debug('args: {}'.format(args))
 
-    config = configparser.ConfigParser()
     try:
         if args.load:
             if not args.file_save:
@@ -125,22 +123,7 @@ if __name__ == '__main__':
             logger.debug('done')
         else:
             logger.info('starting new company')
-            with open(args.company, 'r') as fc:
-                config_str = '[DEFAULT]\n' + fc.read()
-            new_config_str = []
-            for s in config_str.split('\n'):
-                if 'PAYLEVEL' in s:
-                    _, num_jump_grade = s.split('=')
-                    num, jump, grade = num_jump_grade.split(',')
-                    s = '='.join(
-                        ['PAYLEVEL_{}'.format(num),
-                         ','.join([jump, grade])
-                        ]
-                    )
-                new_config_str.append(s)
-
-            config.read_string('\n'.join(new_config_str))
-            company = Airline(args.hub, config)
+            company = Airline(args.hub, args.company)
     except Exception as e:
         logger.error(
             'err={}'
