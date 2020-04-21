@@ -5,12 +5,13 @@ class Pilot:
         self.aircraft = None
         self.hours = 0.0
         self.hub = None
+        self.id = -1
 
     def create(self, name):
         self.name = name
 
     def get_data(self):
-        return self.name, self.aircraft, self.grade, self.hours, self.hub
+        return self.name, self.id, self.aircraft, self.grade, self.hours, self.hub
 
 
 if __name__ == '__main__':
