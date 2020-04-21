@@ -91,16 +91,12 @@ def show_data(network):
         conn[k] = len(v)
 
     total_conn = sum(conn.values())
-    header = 'Network data:'
-    logger.info(
-        '\n'.join([
-            header, '\n'.join([
-                '{}: {} ({:0.2f}%)'
-                .format(k, v, v / total_conn * 100)
-                for k, v in conn.items()
-            ])
-        ])
-    )
+    for k, v in conn.items():
+        logger.info(
+            '{}: {} ({:0.2f}%)'
+            .format(k, v, v / total_conn * 100)
+        )
+
     probable_hubs = find_probable_hubs(network)
     logger.info(
         'possible hubs: [{}]'
