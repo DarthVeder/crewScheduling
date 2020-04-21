@@ -44,7 +44,7 @@ LOGGING_DICT = {
     }
 }
 
-MAX_HUBS = 10
+MAX_HUBS = 4
 MAX_FLIGHTS = 5
 # MAX_FLIGHTS_IN_SCHEDULE = 5
 
@@ -70,23 +70,6 @@ def find_probable_hubs(network):
         probable_hubs.popitem()
 
     return list(probable_hubs.keys())
-
-
-# def generate_schedule(dep_apt, pilot_network, visited):
-#     flights = []
-#     apt = dep_apt
-#     while len(flights) < MAX_FLIGHTS_IN_SCHEDULE:
-#         lnetwork = pilot_network.get(apt)
-#         arr = random.choice(lnetwork)
-#         flights.append(
-#             [apt, arr]
-#         )
-#         visited[apt] = visited.get(apt, 0) + 1
-#         apt = arr
-#
-#     end_apt = apt
-#
-#     return flights, visited, end_apt
 
 
 def build_network(data):
@@ -174,7 +157,6 @@ def purge_other_hubs_connections(assigned_hub, hubs, network):
                 if len(new_network[d]) == 0:
                     del new_network[d]
 
-
     if len(new_network[hub]) == 0:
             del new_network[hub]
 
@@ -230,12 +212,20 @@ if __name__ == '__main__':
     parser.add_argument(
         '--log-dir',
         dest='log_dir',
-        default=r'C:\home\FSXTools\crewScheduling\crewScheduling\flight_generator'
+        default=r'C:\home\FSXTools\crewScheduling\crew_scheduling\flight_generator'
     )
     parser.add_argument(
         '--hub',
         dest='hub',
-        default=None
+        default=None,
+        help='hub for network'
+    )
+    parser.add_argument(
+        '--hubs',
+        dest='hubs',
+        default=None,
+        nargs='+',
+        help='all company hubs'
     )
     parser.add_argument(
         '-i',
@@ -293,6 +283,15 @@ if __name__ == '__main__':
 
     network = build_network(data)
 
+    if args.hubs:
+        hubs = args.hubs
+        logger.info('hubs: {}'.format(' '.join(hubs)))
+    else:
+        hubs = find_probable_hubs(network)
+        logger.info('proposed hubs (connections):')
+        for h in hubs:
+            logger.info('{} ({})'.format(h, len(network[h])))
+
     if args.stats:
         logger.info('building network statistics')
         show_data(network)
@@ -309,23 +308,15 @@ if __name__ == '__main__':
             logger.error('error in writing json network file "{}". err={}'
                          .format(args.file_network_out, str(e)))
 
-
-    # hubs = ['SKBO', 'MSLP', 'SPJC', 'MROC', 'SEQM']
-    hubs = None
-    if not hubs:
-        random.seed()
-        logger.info('no prescribed hub. Guessing hubs')
-        hubs = find_probable_hubs(network)
-        logger.info('proposed hubs: {}'.format(' '.join(hubs)))
-
     if args.hub:
         assigned_hub = args.hub
         logger.info('assigned hub {}'.format(assigned_hub))
+        logger.info('purging other hubs connections')
+        network = purge_other_hubs_connections(assigned_hub, hubs, network)
     else:
-        assigned_hub = random.choice(hubs)
-        logger.info('random assigned hub {}'.format(assigned_hub))
+        assigned_hub = None
+        logger.info('computing flight for all network')
 
-    network = purge_other_hubs_connections(assigned_hub, hubs, network)
     logger.debug('gcmap: {}'.format(make_gcmap_string(network)))
 
     flights = generate_timetable(assigned_hub, network)
@@ -333,7 +324,6 @@ if __name__ == '__main__':
     fout = open('tmp.txt', 'w')
     json.dump(network, fout, indent=4)
     fout.close()
-
 
     logger.info('exporting flights to "{}"'
                 .format('crew_scheduling/flight_generator/schedule.txt'))
