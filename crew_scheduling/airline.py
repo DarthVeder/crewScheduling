@@ -1,4 +1,4 @@
-import pickle
+# import pickle
 import collections
 import yaml
 import datetime
@@ -117,11 +117,11 @@ class Airline:
         self.name = None
         self.code = None
         self.grades = {}
-        self.pilots = []
+        # self.pilots = []
         self.aircrafts = {}
         self.airports = {}
         self.flights = {}
-        self.active_pilot = None
+        # self.active_pilot = None
         self._routes_tree = {}
         self.nsave = 0
 
@@ -191,17 +191,17 @@ class Airline:
         self.default_aircraft = find_min_range_aircraft(self.aircrafts)
         self.flights = self.build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
-    def show_pilots(self):
-        print('company pilots:')
-        if len(self.pilots) == 0:
-            print('no pilots yet!')
-            return
-
-        for p in self.pilots:
-            if p is self.active_pilot:
-                print('{} (*)'.format(p.get_data()))
-            else:
-                print('{}'.format(p.get_data()))
+    # def show_pilots(self):
+    #     print('company pilots:')
+    #     if len(self.pilots) == 0:
+    #         print('no pilots yet!')
+    #         return
+    #
+    #     for p in self.pilots:
+    #         if p is self.active_pilot:
+    #             print('{} (*)'.format(p.get_data()))
+    #         else:
+    #             print('{}'.format(p.get_data()))
 
     def get_company_data(self):
         return (self.name, self.code, [x.get_data() for x in self.pilots],
@@ -226,21 +226,21 @@ class Airline:
     def get_aircraft_range(self, aircraft_id):
         return self.aircrafts[aircraft_id]['range']
 
-    def pickle(self):
-        file_save = 'airline.{}.sts'.format(self.nsave)
-        self.nsave += 1
-        f = open(file_save, 'wb')
-        pickle.dump(self, f)
-        f.close()
-
-    @staticmethod
-    def unpickle(file_save):
-        try:
-            with open(file_save, 'rb') as f:
-                return pickle.load(f)
-        except Exception as e:
-            logger.error('unpickle err={}'.format(e))
-            exit(1)
+    # def pickle(self):
+    #     file_save = 'airline.{}.sts'.format(self.nsave)
+    #     self.nsave += 1
+    #     f = open(file_save, 'wb')
+    #     pickle.dump(self, f)
+    #     f.close()
+    #
+    # @staticmethod
+    # def unpickle(file_save):
+    #     try:
+    #         with open(file_save, 'rb') as f:
+    #             return pickle.load(f)
+    #     except Exception as e:
+    #         logger.error('unpickle err={}'.format(e))
+    #         exit(1)
 
     def build_routes(self, file_schedule, print_to_file=False):
         logger.debug("building routes")
@@ -332,20 +332,20 @@ class Airline:
         return self._routes_tree[airport_icao]
 
 # PILOT UTILITIES
-    def get_pilots(self):
-        return self.pilots
-
-    def get_active_pilot(self):
-        return self.active_pilot
-
-    def get_active_pilot_aircraft(self):
-        return self.active_pilot.aircraft
-
-    def set_active_pilot(self, active_pilot):
-        self.active_pilot = active_pilot
-
-    def assign_pilot(self, new_pilot):
-        self.pilots.append(new_pilot)
+#     def get_pilots(self):
+#         return self.pilots
+#
+#     def get_active_pilot(self):
+#         return self.active_pilot
+#
+#     def get_active_pilot_aircraft(self):
+#         return self.active_pilot.aircraft
+#
+#     def set_active_pilot(self, active_pilot):
+#         self.active_pilot = active_pilot
+#
+#     def assign_pilot(self, new_pilot):
+#         self.pilots.append(new_pilot)
         
     def assign_aircraft_to_active_pilot(self, pilot=None, aircraft=None):
         if aircraft is None and pilot is None:

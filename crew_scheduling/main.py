@@ -1,13 +1,12 @@
 import logging.config
 import argparse
 from crew_scheduling.airline import Airline
+from crew_scheduling.pilot import Pilot
 from datetime import datetime, timedelta
-from crew_scheduling.menu import main_menu
+# from crew_scheduling.menu import main_menu
 
-logger = logging.getLogger('crew_scheduler')
-
-MAJOR = 3
-MINOR = 1
+MAJOR = 4
+MINOR = 0
 PATCH = 0
 VERSION = '.'.join(
     [str(x) for x in [MAJOR, MINOR, PATCH]]
@@ -47,39 +46,42 @@ LOGGING_DICT = {
     }
 }
 
+logging.config.dictConfig(LOGGING_DICT)
+logger = logging.getLogger('crew_scheduler')
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='crew scheduler'
     )
-    parser.add_argument(
-        '--company',
-        '-c',
-        help='company FSC cfg file',
-        dest='company',
-        required=True
-    )
+    # parser.add_argument(
+    #     '--company',
+    #     '-c',
+    #     help='company FSC cfg file',
+    #     dest='company',
+    #     required=True
+    # )
     parser.add_argument(
         '--pilot',
         '-p',
-        help='pilot ',
-        dest='pilot',
+        help='pilot configuration file',
+        dest='pilot_file',
         required=True
     )
-    parser.add_argument(
-        '--load',
-        '-l',
-        help='load company save file',
-        dest='load',
-        action='store_true',
-        default=False
-    )
-    parser.add_argument(
-        '--load-file',
-        help='company save file to load',
-        dest='file_save',
-        default=None
-    )
+    # parser.add_argument(
+    #     '--load',
+    #     '-l',
+    #     help='load company save file',
+    #     dest='load',
+    #     action='store_true',
+    #     default=False
+    # )
+    # parser.add_argument(
+    #     '--load-file',
+    #     help='company save file to load',
+    #     dest='file_save',
+    #     default=None
+    # )
     parser.add_argument(
         '--log-level',
         dest='log_level',
@@ -89,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--log-dir',
         dest='log_dir',
-        default=r'C:\home\FSXTools\crewScheduling\crewScheduling'
+        default=r'C:\home\FSXTools\crewScheduling\crew_scheduling'
     )
     parser.add_argument(
         '--start-date',
@@ -103,7 +105,7 @@ if __name__ == '__main__':
         '--hub',
         help='hub',
         dest='hub',
-        required=True
+        required=False
     )
 
     args = parser.parse_args()
@@ -114,26 +116,33 @@ if __name__ == '__main__':
         print(e)
         exit(1)
 
-    logging.config.dictConfig(LOGGING_DICT)
     logger.info('starting')
     logger.debug('args: {}'.format(args))
 
+    # try:
+        # if args.load:
+        #     if not args.file_save:
+        #         logger.error('--load needs --load-file')
+        #         exit(1)
+        #     logger.info('loading')
+        #     company = Airline.unpickle(args.file_save)
+        #     print(company.nsave)
+        #     logger.debug(company.get_company_data())
+        #     logger.debug('done')
+        # else:
+        #     logger.info('starting new company')
+        #     company = Airline(args.hub, args.company)
     try:
-        if args.load:
-            if not args.file_save:
-                logger.error('--load needs --load-file')
-                exit(1)
-            logger.info('loading')
-            company = Airline.unpickle(args.file_save)
-            print(company.nsave)
-            logger.debug(company.get_company_data())
-            logger.debug('done')
-        else:
-            logger.info('starting new company')
-            company = Airline(args.hub, args.company)
+        logging.info(
+            'loading pilot file {}'
+            .format(args.pilot_file)
+        )
+        pilot = Pilot(args.pilot_file)
+        pilot.view_data()
+
     except Exception as e:
         logger.error(
-            'err={}'
+            'starting error. err={}'
             .format(e)
         )
         exit(1)

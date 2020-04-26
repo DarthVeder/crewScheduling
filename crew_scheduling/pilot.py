@@ -2,6 +2,7 @@ import configparser
 import logging
 import pickle
 
+
 logger = logging.getLogger('crew_scheduler.' + __name__)
 
 
@@ -26,12 +27,16 @@ class Pilot:
         self.aircraft = config.get('DEFAULT', 'aircraft')
         self.company_file = config.get('DEFAULT', 'company_file')
         self.hours = 0.0
-        self.hub = None
+        self.hub = config.get('DEFAULT', 'hub')
         self.id = config.get('DEFAULT', 'id')
         self.last_airport = None
 
     def create(self, name):
         self.name = name
+
+    def view_data(self):
+        for k, v in self.get_data().items():
+            logger.info('{}: {}'.format(k, v))
 
     def get_data(self):
         return {
