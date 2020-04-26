@@ -2,11 +2,22 @@ import sqlite3
 from tkinter import *
 from tkinter.scrolledtext import ScrolledText
 from datetime import datetime, timedelta, date, time
+from tkinter import messagebox
+
 
 def donothing():
-   filewin = Toplevel(root)
-   button = Button(filewin, text="Do nothing button")
-   button.pack()
+    filewin = Toplevel(root)
+    button = Button(filewin, text="Do nothing button")
+    button.pack()
+
+def about_data():
+   message = [
+      'By Marco Messina',
+      'Copyright 2020-'
+   ]
+   message = '\n'.join(message)
+   messagebox.showinfo("About", message)
+
 
 
 def extract(conn, pilot):
@@ -15,70 +26,56 @@ def extract(conn, pilot):
     c.execute('select * from flights where UserName = ?', (pilot,))
     r = c.fetchone()
     print(r.keys())
-    
+
     return c.fetchall()
 
 
+if __name__ == '__main__':
+    root = Tk()
+    menubar = Menu(root)
 
-if __name__ == '__main__':   
-   root = Tk()
-   menubar = Menu(root)
-   filemenu = Menu(menubar, tearoff=0)
-   filemenu.add_command(label="New", command=donothing)
-   filemenu.add_command(label="Open", command=donothing)
-   filemenu.add_command(label="Save", command=donothing)
-   filemenu.add_command(label="Save as...", command=donothing)
-   filemenu.add_command(label="Close", command=donothing)
+    companymenu = Menu(menubar, tearoff=0)
+    companymenu.add_command(label="Open", command=donothing)
+    companymenu.add_command(label="Save", command=donothing)
 
-   filemenu.add_separator()
+    companymenu.add_command(label="Exit", command=root.quit)
 
-   filemenu.add_command(label="Exit", command=root.quit)
-   menubar.add_cascade(label="File", menu=filemenu)
-   editmenu = Menu(menubar, tearoff=0)
-   editmenu.add_command(label="Undo", command=donothing)
-   
-   editmenu.add_separator()
+    menubar.add_cascade(label="Company", menu=companymenu)
 
-   editmenu.add_command(label="Cut", command=donothing)
-   editmenu.add_command(label="Copy", command=donothing)
-   editmenu.add_command(label="Paste", command=donothing)
-   editmenu.add_command(label="Delete", command=donothing)
-   editmenu.add_command(label="Select All", command=donothing)
+    pilotmenu = Menu(menubar, tearoff=0)
+    pilotmenu.add_command(label="Insert", command=donothing)
+    pilotmenu.add_command(label="Activate", command=donothing)
+    pilotmenu.add_command(label="Schedule", command=donothing)
 
-   menubar.add_cascade(label="Edit", menu=editmenu)
-   helpmenu = Menu(menubar, tearoff=0)
-   helpmenu.add_command(label="Help Index", command=donothing)
-   helpmenu.add_command(label="About...", command=donothing)
-   menubar.add_cascade(label="Help", menu=helpmenu)
+    menubar.add_cascade(label="Pilot", menu=pilotmenu)
 
-   conn = sqlite3.connect('my_mrk.db', detect_types=sqlite3.PARSE_DECLTYPES |
-                           sqlite3.PARSE_COLNAMES)
-   pilot_id = 'AT1368'
-   pilot_data = extract(conn, pilot_id)
+    aboutmenu = Menu(menubar, tearoff=0)
+    aboutmenu.add_command(label="About", command=about_data)
 
-   w=ScrolledText(root, undo=True)
-   
-   total_time = datetime.combine(date.today(), time(hour=0))
-   for d in pilot_data:
-      #print(time.fromisoformat(d['TotalBlockTime']))
-      timeobj = time.fromisoformat(d['TotalBlockTime'])
-      total_time = total_time + \
-      (datetime.combine(date.min, timeobj) - datetime.min)
-   print(total_time)
+    menubar.add_cascade(label="Help", menu=aboutmenu)
 
-   text = ''
-   for p in pilot_data:
-      text = ' '.join([p['datestamp'], p['FlightId'],
-                p['DepartureIcaoName'], p['ArrivalIcaoName']])
-      w.insert(END, text + '\n')
+    conn = sqlite3.connect('my_mrk.db', detect_types=sqlite3.PARSE_DECLTYPES |
+                                                     sqlite3.PARSE_COLNAMES)
+    pilot_id = 'AT1368'
+    pilot_data = extract(conn, pilot_id)
 
-     # for pp in p:
-     #    text = ' '.join([text, str(pp)])
-#      text = ''.join([text, r'\n'])
-         
-   w.pack(expand=True, fill='both')
+    w = ScrolledText(root, undo=True)
 
+    total_time = datetime.combine(date.today(), time(hour=0))
+    for d in pilot_data:
+        # print(time.fromisoformat(d['TotalBlockTime']))
+        timeobj = time.fromisoformat(d['TotalBlockTime'])
+        total_time = total_time + \
+                     (datetime.combine(date.min, timeobj) - datetime.min)
+    print(total_time)
 
+    text = ''
+    for p in pilot_data:
+        text = ' '.join([p['datestamp'], p['FlightId'],
+                         p['DepartureIcaoName'], p['ArrivalIcaoName']])
+        w.insert(END, text + '\n')
 
-   root.config(menu=menubar)
-   root.mainloop()
+    w.pack(expand=True, fill='both')
+
+    root.config(menu=menubar)
+    root.mainloop()

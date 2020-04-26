@@ -60,6 +60,13 @@ if __name__ == '__main__':
         required=True
     )
     parser.add_argument(
+        '--pilot',
+        '-p',
+        help='pilot ',
+        dest='pilot',
+        required=True
+    )
+    parser.add_argument(
         '--load',
         '-l',
         help='load company save file',
@@ -131,10 +138,10 @@ if __name__ == '__main__':
         )
         exit(1)
 
-    while True:
-        try:
-            main_menu.show()
-            choice = input('Choice? ')
-            main_menu.action(choice, company=company)
-        except Exception as e:
-            print('wrong choice. err={}'.format(e))
+    # while True:
+    #     try:
+    #         main_menu.show()
+    #         choice = input('Choice? ')
+    #         main_menu.action(choice, company=company)
+    #     except Exception as e:
+    #         print('wrong choice. err={}'.format(e))
