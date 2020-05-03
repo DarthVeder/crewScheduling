@@ -1,10 +1,8 @@
-import configparser
 import logging
+import configparser
 import pickle
 
-
 logger = logging.getLogger('crew_scheduler.' + __name__)
-
 
 class Pilot:
     def __init__(self, pilot_file=None):
@@ -31,6 +29,12 @@ class Pilot:
         self.id = config.get('DEFAULT', 'id')
         self.last_airport = None
 
+    def get_company_file(self):
+        return self.company_file
+
+    def get_hub(self):
+        return self.hub
+
     def create(self, name):
         self.name = name
 
@@ -42,29 +46,29 @@ class Pilot:
         return {
             'name': self.name,
             'id': self.id,
-            'aicraft': self.aircraft,
+            'aircraft': self.aircraft,
             'grade': self.grade,
             'hours': self.hours,
             'hub': self.hub
         }
 
-    def pickle(self):
-        file_save = '{}.{}.cs'.format(self.save_name, self.nsave)
-        self.nsave += 1
-        f = open(file_save, 'wb')
-        pickle.dump(self, f)
-        f.close()
-        logger.info('dumpig pilot file "{}"'.format(self.save_name))
-
-    @staticmethod
-    def unpickle(file_save):
-        try:
-            with open(file_save, 'rb') as f:
-                return pickle.load(f)
-        except Exception as e:
-            logger.error('unpickle err={}'.format(e))
-            exit(1)
-        logger.info('unpickled pilot file {}'.format(file_save))
+    # def pickle(self):
+    #     file_save = '{}.{}.cs'.format(self.save_name, self.nsave)
+    #     self.nsave += 1
+    #     f = open(file_save, 'wb')
+    #     pickle.dump(self, f)
+    #     f.close()
+    #     logger.info('dumpig pilot file "{}"'.format(self.save_name))
+    #
+    # @staticmethod
+    # def unpickle(file_save):
+    #     try:
+    #         with open(file_save, 'rb') as f:
+    #             return pickle.load(f)
+    #     except Exception as e:
+    #         logger.error('unpickle err={}'.format(e))
+    #         exit(1)
+    #     logger.info('unpickled pilot file {}'.format(file_save))
 
 
 if __name__ == '__main__':
@@ -74,10 +78,10 @@ if __name__ == '__main__':
     for k, v in pilot.get_data().items():
         print('{}: {}'.format(k, v))
 
-    pilot.pickle()
-
-    print('unpickling')
-    pilot = Pilot.unpickle(r'C:\home\FSXTools\crewScheduling\data\pilots\ram_malik.0.cs')
-
-    for k, v in pilot.get_data().items():
-        print('{}: {}'.format(k, v))
+    # pilot.pickle()
+    #
+    # print('unpickling')
+    # pilot = Pilot.unpickle(r'C:\home\FSXTools\crewScheduling\data\pilots\ram_malik.0.cs')
+    #
+    # for k, v in pilot.get_data().items():
+    #     print('{}: {}'.format(k, v))

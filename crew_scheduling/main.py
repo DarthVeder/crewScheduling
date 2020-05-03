@@ -1,9 +1,9 @@
 import logging.config
+import logging
 import argparse
 from crew_scheduling.airline import Airline
 from crew_scheduling.pilot import Pilot
 from datetime import datetime, timedelta
-# from crew_scheduling.menu import main_menu
 
 MAJOR = 4
 MINOR = 0
@@ -45,9 +45,6 @@ LOGGING_DICT = {
         }
     }
 }
-
-logging.config.dictConfig(LOGGING_DICT)
-logger = logging.getLogger('crew_scheduler')
 
 
 if __name__ == '__main__':
@@ -116,41 +113,33 @@ if __name__ == '__main__':
         print(e)
         exit(1)
 
+    logging.config.dictConfig(LOGGING_DICT)
+    logger = logging.getLogger('crew_scheduler')
+
     logger.info('starting')
     logger.debug('args: {}'.format(args))
 
-    # try:
-        # if args.load:
-        #     if not args.file_save:
-        #         logger.error('--load needs --load-file')
-        #         exit(1)
-        #     logger.info('loading')
-        #     company = Airline.unpickle(args.file_save)
-        #     print(company.nsave)
-        #     logger.debug(company.get_company_data())
-        #     logger.debug('done')
-        # else:
-        #     logger.info('starting new company')
-        #     company = Airline(args.hub, args.company)
     try:
-        logging.info(
+        logger.info(
             'loading pilot file {}'
             .format(args.pilot_file)
         )
         pilot = Pilot(args.pilot_file)
         pilot.view_data()
-
     except Exception as e:
         logger.error(
-            'starting error. err={}'
+            'Problems in loading pilot file. err={}'
             .format(e)
         )
         exit(1)
 
-    # while True:
-    #     try:
-    #         main_menu.show()
-    #         choice = input('Choice? ')
-    #         main_menu.action(choice, company=company)
-    #     except Exception as e:
-    #         print('wrong choice. err={}'.format(e))
+    logger.info(
+        'loading company file {}'.format(pilot.get_company_file())
+    )
+    logger.info(
+        'pilot hub: '.format(pilot.get_hub())
+    )
+    company = Airline(pilot.get_hub(), pilot.get_company_file())
+
+    pilot = company.assign_aircraft(pilot)
+    schedule = company.get_schedule(pilot)

@@ -117,11 +117,9 @@ class Airline:
         self.name = None
         self.code = None
         self.grades = {}
-        # self.pilots = []
         self.aircrafts = {}
         self.airports = {}
         self.flights = {}
-        # self.active_pilot = None
         self._routes_tree = {}
         self.nsave = 0
 
@@ -189,19 +187,7 @@ class Airline:
 
         self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
         self.default_aircraft = find_min_range_aircraft(self.aircrafts)
-        self.flights = self.build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
-
-    # def show_pilots(self):
-    #     print('company pilots:')
-    #     if len(self.pilots) == 0:
-    #         print('no pilots yet!')
-    #         return
-    #
-    #     for p in self.pilots:
-    #         if p is self.active_pilot:
-    #             print('{} (*)'.format(p.get_data()))
-    #         else:
-    #             print('{}'.format(p.get_data()))
+        # self.flights = self.build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
     def get_company_data(self):
         return (self.name, self.code, [x.get_data() for x in self.pilots],
@@ -226,22 +212,6 @@ class Airline:
     def get_aircraft_range(self, aircraft_id):
         return self.aircrafts[aircraft_id]['range']
 
-    # def pickle(self):
-    #     file_save = 'airline.{}.sts'.format(self.nsave)
-    #     self.nsave += 1
-    #     f = open(file_save, 'wb')
-    #     pickle.dump(self, f)
-    #     f.close()
-    #
-    # @staticmethod
-    # def unpickle(file_save):
-    #     try:
-    #         with open(file_save, 'rb') as f:
-    #             return pickle.load(f)
-    #     except Exception as e:
-    #         logger.error('unpickle err={}'.format(e))
-    #         exit(1)
-
     def build_routes(self, file_schedule, print_to_file=False):
         logger.debug("building routes")
         # Reading full flight schedule from FSC scheduling file
@@ -259,7 +229,7 @@ class Airline:
                 if line[0] not in comments:
                     flight_text = line.split('=')[1]
                     (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
-                    logging.debug(
+                    logger.debug(
                         'flight nr {}, dep {}, arr {}'
                         .format(flight_number, dep, arr)
                     )
@@ -331,47 +301,25 @@ class Airline:
     def get_all_connections_from(self, airport_icao):
         return self._routes_tree[airport_icao]
 
-# PILOT UTILITIES
-#     def get_pilots(self):
-#         return self.pilots
-#
-#     def get_active_pilot(self):
-#         return self.active_pilot
-#
-#     def get_active_pilot_aircraft(self):
-#         return self.active_pilot.aircraft
-#
-#     def set_active_pilot(self, active_pilot):
-#         self.active_pilot = active_pilot
-#
-#     def assign_pilot(self, new_pilot):
-#         self.pilots.append(new_pilot)
-        
-    def assign_aircraft_to_active_pilot(self, pilot=None, aircraft=None):
-        if aircraft is None and pilot is None:
-            # assign by default first aircraft in fleet.yml file
-            self.active_pilot.aircraft = list(self.aircrafts.keys())[0] 
+    def assign_aircraft(self, pilot):
+        if pilot.aircraft is None:
+            pilot.aircraft = list(self.aircrafts.keys())[0]
         else:
             for p in range(len(self.pilots)):
                 if pilot.name == self.pilots[p].name:
                     self.pilots[p].aircraft = aircraft
 
-    def assign_grade(self):
-        # Check to see if an active pilot exists
-        if self.active_pilot is None:
-            logger.error('assign an active pilot first')
-            exit(1)
-
-        diff = self.active_pilot.hours * \
-             (-self.active_pilot.hours + self.grades[1].hours)
+    def assign_grade(self, pilot):
+        diff = pilot.hours * \
+             (-pilot.hours + self.grades[1].hours)
         if diff >= 0:
-            self.active_pilot.grade = self.grades[1].title
+            pilot.grade = self.grades[1].title
             return
         for i in range(1,len(self.grades)):
-            diff = (self.active_pilot.hours - self.grades[i-1].hours) * \
-                   (-self.active_pilot.hours + self.grades[i].hours)
+            diff = (pilot.hours - self.grades[i-1].hours) * \
+                   (-pilot.hours + self.grades[i].hours)
             if diff >= 0:
-                self.active_pilot.grade = self.grades[i].title
+                self.pilot.grade = self.grades[i].title
                 return 
 
     def assign_roster(self):
