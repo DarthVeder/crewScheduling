@@ -96,6 +96,7 @@ if __name__ == '__main__':
 
     if args.insert:
         load_data(args.db_name, args.data_file)
+        exit(0)
 #
 #     pilot = 'AT1368'
 #     data = extract(conn, pilot)
