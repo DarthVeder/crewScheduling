@@ -26,8 +26,8 @@ def load_data(db_name, data_file):
         conn = sqlite3.connect(db_name)
         c = conn.cursor()
         with open(data_file, 'r') as fin:
-            data = fin.readline().strip()
-            c.execute(data)
+            data = fin.readlines()
+        c.execute(''.join(data))
         conn.commit()
         conn.close()
     except Exception as e:
