@@ -21,8 +21,10 @@ class Pilot:
         self.save_name = pilot_file.split('.')[0]
         self.nsave = 0
         self.name = config.get('DEFAULT', 'name')
-        self.grade = config.get('DEFAULT', 'grade')
-        self.aircraft = config.get('DEFAULT', 'aircraft')
+        self.grade = None if 'None' in config.get('DEFAULT', 'grade') \
+            else config.get('DEFAULT', 'grade')
+        self.aircraft_id = None if 'None' in config.get('DEFAULT', 'aircraft_id') \
+            else config.get('DEFAULT', 'aircraft_id')
         self.company_file = config.get('DEFAULT', 'company_file')
         self.hours = 0.0
         self.hub = config.get('DEFAULT', 'hub')
@@ -46,7 +48,7 @@ class Pilot:
         return {
             'name': self.name,
             'id': self.id,
-            'aircraft': self.aircraft,
+            'aircraft_id': self.aircraft_id,
             'grade': self.grade,
             'hours': self.hours,
             'hub': self.hub

@@ -88,6 +88,10 @@ if __name__ == '__main__':
     try:
         if args.log_level == 'debug':
             LOGGING_DICT['handlers']['console_handler']['level'] = logging.DEBUG
+            LOGGING_DICT['handlers']['file_handler']['level'] = logging.DEBUG
+        elif args.log_level == 'info':
+            LOGGING_DICT['handlers']['console_handler']['level'] = logging.INFO
+            LOGGING_DICT['handlers']['file_handler']['level'] = logging.INFO
     except Exception as e:
         print(e)
         exit(1)
@@ -120,5 +124,15 @@ if __name__ == '__main__':
     )
     company = Airline(pilot.get_hub(), pilot.get_company_file())
 
+    old_aircraft_id = pilot.aircraft_id
     pilot = company.assign_aircraft(pilot)
-    schedule = company.get_schedule(pilot)
+    if pilot.aircraft_id != old_aircraft_id:
+        logger.info(
+            'Congratulations! You have been assigned to aircraft {}'
+            .format(pilot.aircraft_id)
+        )
+    schedule = company.assign_roster(pilot)
+    logger.info(
+        '{}'
+        .format(schedule)
+    )

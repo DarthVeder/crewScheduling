@@ -187,7 +187,7 @@ class Airline:
 
         self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
         self.default_aircraft = find_min_range_aircraft(self.aircrafts)
-        # self.flights = self.build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
+        self.flights = self._build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
     def get_company_data(self):
         return (self.name, self.code, [x.get_data() for x in self.pilots],
@@ -212,7 +212,7 @@ class Airline:
     def get_aircraft_range(self, aircraft_id):
         return self.aircrafts[aircraft_id]['range']
 
-    def build_routes(self, file_schedule, print_to_file=False):
+    def _build_routes(self, file_schedule, print_to_file=False):
         logger.debug("building routes")
         # Reading full flight schedule from FSC scheduling file
         comments = [';']
@@ -272,6 +272,15 @@ class Airline:
                             flights[key] = flight
                             key = key + 1
 
+        for (k, flight) in flights.items():
+            # Building routes tree
+            flight_no, dep, arr, etd_lt, D, _ = flight
+            if dep in self._routes_tree.keys():
+                # ok, already in the tree, adding the new destination tuple (flight_no, arr)
+                self._routes_tree[dep].append(flights[k])
+            else:
+                self._routes_tree[dep] = [flights[k]]
+
         if print_to_file:
             file_out = 'aircraft_routes.txt'
             logger.debug('printing route with aircraft to file {}'.format(file_out))
@@ -284,13 +293,6 @@ class Airline:
                 fout.write(line+'\n')
                 flights[k] = Flight(id=flight_no, dep=dep, arr=arr, time_lt=etd_lt, distance=D, aircraft=aircrafts)
 
-                # Building routes tree
-                if dep in self._routes_tree.keys():
-                    # ok, already in the tree, adding the new destination tuple (flight_no, arr)
-                    self._routes_tree[dep].append(flights[k])
-                else:
-                    self._routes_tree[dep] = [flights[k]]
-
             fout.close()
 
         logger.debug('found {} flights'.format(len(flights)))
@@ -302,12 +304,15 @@ class Airline:
         return self._routes_tree[airport_icao]
 
     def assign_aircraft(self, pilot):
-        if pilot.aircraft is None:
-            pilot.aircraft = list(self.aircrafts.keys())[0]
+        if pilot.aircraft_id is None:
+            pilot.aircraft_id = list(self.aircrafts.keys())[0]
         else:
-            for p in range(len(self.pilots)):
-                if pilot.name == self.pilots[p].name:
-                    self.pilots[p].aircraft = aircraft
+            pass
+            # for p in range(len(self.pilots)):
+            #     if pilot.name == self.pilots[p].name:
+            #         self.pilots[p].aircraft = aircraft
+
+        return pilot
 
     def assign_grade(self, pilot):
         diff = pilot.hours * \
@@ -322,7 +327,7 @@ class Airline:
                 self.pilot.grade = self.grades[i].title
                 return 
 
-    def assign_roster(self):
+    def assign_roster(self, pilot):
         """
         The roster is found in the following way: first a random flight is selected form the __routes_tree base on the
         last pilot position. The roster starting time is the flight departure minus one hour. Then a random sequence of
@@ -348,7 +353,7 @@ class Airline:
 
         random.seed()
 
-        active_pilot_acft_id = self.get_active_pilot_aircraft()
+        active_pilot_acft_id = pilot.aircraft_id
         dep_airport = self.hub
 
         # selective only flights for current active pilot aircraft
@@ -367,7 +372,7 @@ class Airline:
                                flight_departure)
         logger.info('Start roster (all times are LMT): {}'
               .format(start_roster_time.isoformat()))
-        speed = self.get_aircraft_ktas(self.get_active_pilot_aircraft())
+        speed = self.get_aircraft_ktas(active_pilot_acft_id)
         ft = flights[0].distance/speed
         logger.debug(
             '{} {} {} {}'
@@ -380,8 +385,7 @@ class Airline:
         total_ft = ft
         flights = [f for f in self.get_all_connections_from(arr_airport)
                    if active_pilot_acft_id in list(f.aircraft.keys())]
-        print(flights)
-        exit()
+
         while build_roster:
             flight = random.choice(flights)
             ft = flight.distance/speed
