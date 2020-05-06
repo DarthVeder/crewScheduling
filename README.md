@@ -1,10 +1,30 @@
 # crew_scheduling
 
-It is a tool to generate a pilot schedule, given a start date, 
+This is a collection of tools to generate a pilot schedule, given a start date, 
 and company data (fleet and network).
 
-
 # Utilities
+
+## Pilot schedule
+
+This tool generates the schedule to fly in txt format.
+
+Usage:
+```
+main.py [-h] --pilot PILOT_FILE [--log-level {info,debug}] [--log-dir LOG_DIR] --start-date START_DATE [--hub HUB]
+
+crew scheduler
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --pilot PILOT_FILE, -p PILOT_FILE
+                        pilot configuration file
+  --log-level {info,debug}
+  --log-dir LOG_DIR
+  --start-date START_DATE, -s START_DATE
+                        start date, format "YYY-mm-dd"
+  --hub HUB             hub
+```
 
 ## Flights schedule generator
 

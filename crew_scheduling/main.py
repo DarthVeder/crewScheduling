@@ -51,13 +51,6 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='crew scheduler'
     )
-    # parser.add_argument(
-    #     '--company',
-    #     '-c',
-    #     help='company FSC cfg file',
-    #     dest='company',
-    #     required=True
-    # )
     parser.add_argument(
         '--pilot',
         '-p',
@@ -65,20 +58,6 @@ if __name__ == '__main__':
         dest='pilot_file',
         required=True
     )
-    # parser.add_argument(
-    #     '--load',
-    #     '-l',
-    #     help='load company save file',
-    #     dest='load',
-    #     action='store_true',
-    #     default=False
-    # )
-    # parser.add_argument(
-    #     '--load-file',
-    #     help='company save file to load',
-    #     dest='file_save',
-    #     default=None
-    # )
     parser.add_argument(
         '--log-level',
         dest='log_level',
@@ -93,7 +72,7 @@ if __name__ == '__main__':
     parser.add_argument(
         '--start-date',
         '-s',
-        help='start date, format %Y-%m-%d',
+        help='start date, format "YYY-mm-dd"',
         dest='start_date',
         type=lambda d: datetime.strptime(d, '%Y-%m-%d'),
         required=True
