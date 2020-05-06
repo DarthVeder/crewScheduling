@@ -47,7 +47,7 @@ def extract(conn, pilot):
     
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Managing pilots DB from altervista')
+    parser = argparse.ArgumentParser(description='Managing pilots DB "flights" table from altervista')
     parser.add_argument(
         '--db-name',
         dest='db_name',
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         dest='insert',
         action='store_true'
     )
-    group_db.add_argument(
+    group_i.add_argument(
         '--data-file',
         help='data to insert as sql command(s)',
         dest='data_file',
