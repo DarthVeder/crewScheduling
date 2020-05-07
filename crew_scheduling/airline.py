@@ -14,14 +14,15 @@ logger = logging.getLogger('crew_scheduler.' + __name__)
 
 Grade = collections.namedtuple('Grade', 'hours title')
 Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft')
-# Aircraft = collections.namedtuple('Aircraft', 'id name ktas range')
+Schedule = collections.namedtuple('Schedule', 'id dep arr dep_lt arr_lt block_time')
 
-MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
+PRESENTATION_HRS = 1.0
+AIRCRAFT_TURNOVER_HRS = 45/60
 MINIMUM_FLIGHT_PERCENT_DISTANCE= 10
 MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = os.path.join('.', 'data', 'FSX')
 MAXIMUM_FLIGHT_TIME_HRS = 14.0
-
+MINIMUM_REST_HRS = 10.0
 
 def lmt2utc(latitude_deg, lmt):
     deltat = timedelta(hours=latitude_deg/15.0)
@@ -68,8 +69,12 @@ def load_fleet(fleet_file):
     return aircrafts
 
 
-def nice_time(d):
+def nice_datetime(d):
     return d.strftime('%d/%m/%y %H:%M')
+
+
+def nice_time(d):
+    return d.strftime('%H:%M')
 
 
 def find_min_range_aircraft(aircrafts):
@@ -270,7 +275,7 @@ class Airline:
                             aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                             aircraft_id = list(aircrafts.keys())[0]
                             ktas = self.get_aircraft_ktas(aircraft_id)
-                            dep_time = ceil(MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS+ceil(D/ktas))
+                            dep_time = ceil(AIRCRAFT_TURNOVER_HRS+ceil(D/ktas))
 
                             flight = Flight(id=flight_number, dep=dep, arr=arr,
                                             time_lt=time(hour=dep_time, minute=0),
@@ -360,55 +365,61 @@ class Airline:
         random.seed()
 
         active_pilot_acft_id = pilot.aircraft_id
-        # dep_airport = self.hub
         dep_airport = pilot.last_airport
 
-        # selective only flights for current active pilot aircraft
         flights = [f for f in self.get_all_connections_from(dep_airport)
                    if active_pilot_acft_id in list(f.aircraft.keys())]
-        # suffling flights
-        # random.shuffle(flights)
 
         day = start_date
-        # time before first presentation at crew dispatcher
-        delta = timedelta(hours=1)
-        first_flight = random.choice(flights)
-        flight_departure = datetime.combine(
-            day,
-            first_flight.time_lt
-        )
-        arr_airport = first_flight.arr
-        start_roster_time = flight_departure - delta
-        dep_utc_time = start_roster_time
-        logger.info('Start roster (all times are LMT): {}'
-              .format(start_roster_time.strftime('%d/%m/%y %H:%M')))
+        delta = timedelta(hours=PRESENTATION_HRS)
+        # first_flight = random.choice(flights)
+        # flight_departure = datetime.combine(
+        #     day,
+        #     first_flight.time_lt
+        # )
+        # arr_airport = first_flight.arr
+        # start_roster_time = flight_departure - delta
+        # dep_utc_time = start_roster_time
+        # logger.info(
+        #     'Start roster (all times are LMT): {}'
+        #     .format(nice_datetime(start_roster_time))
+        # )
         speed = self.get_aircraft_ktas(active_pilot_acft_id)
-        ft = first_flight.distance/speed
-        logger.debug(
-            '{} {} {} {}'
-            .format(first_flight.dep, first_flight.arr,
-                    nice_time(dep_utc_time), first_flight.id))
-        del first_flight
+        # ft = first_flight.distance/speed
+        # logger.debug(
+        #     '{date} {flight_nr} {dep} {arr}'
+        #     .format(dep=first_flight.dep, arr=first_flight.arr,
+        #             date=nice_datetime(dep_utc_time), flight_nr=first_flight.id))
+        # # del first_flight
 
         roster = []
         build_roster = True
-        total_ft = ft
-        flights = [f for f in self.get_all_connections_from(arr_airport)
-                   if active_pilot_acft_id in list(f.aircraft.keys())]
+        total_ft = 0
+        block_time = PRESENTATION_HRS
+        # flights = [f for f in self.get_all_connections_from(arr_airport)
+        #            if active_pilot_acft_id in list(f.aircraft.keys())]
 
         while build_roster:
-            try:
-                flight = random.choice(flights)
-            except Exception as e:
-                logger.error(e)
+            flight = random.choice(flights)
             ft = flight.distance/speed
+            dep_utc_time = datetime.combine(
+                day,
+                flight.time_lt
+            )
             arr_utc_time = dep_utc_time + timedelta(hours=ft)
-            arr_utc_time = arr_utc_time + timedelta(minutes=45)  # turnover /change of aircraft 45 min
-            total_ft = total_ft \
-                + (arr_utc_time - dep_utc_time).total_seconds()/3600.0
+            total_ft += ft
+            arr_utc_time = arr_utc_time + timedelta(minutes=AIRCRAFT_TURNOVER_HRS)
+            block_time = block_time + ft + AIRCRAFT_TURNOVER_HRS
             new_dep_airport = flight.arr
             if total_ft < MAXIMUM_FLIGHT_TIME_HRS:
-                roster.append(flight)
+                roster.append(
+                    Schedule(
+                        id='{}{}'.format(self.code, flight.id),
+                        dep=flight.dep, arr=flight.arr,
+                        dep_lt=dep_utc_time, arr_lt=arr_utc_time,
+                        block_time=block_time
+                    )
+                )
                 flights = \
                     [f for f in self.get_all_connections_from(new_dep_airport)
                      if active_pilot_acft_id in list(f.aircraft.keys()) and
@@ -418,11 +429,11 @@ class Airline:
 
         for r in roster:
             logger.debug(
-                '{dep} {arr} {date} {code}{flight_no}'
+                '{date} {flight_no} {dep} {arr}'
                 .format(
-                    date=nice_time(datetime.combine(day, r.time_lt)),
+                    date=nice_datetime(r.arr_lt.date()),
                     dep=r.dep, arr=r.arr,
-                    code=self.code, flight_no=r.id
+                    flight_no='{}{}'.format(self.code, r.id)
                 )
             )
         logger.debug(
@@ -443,13 +454,13 @@ class Airline:
         line = []
         for f in flights:
             line.append(
-                '\t{flight_no:4s}\t\t{dep}\t{arr}\t{start_time}\t\t{end_time}\t\t{block}'
+                '\t{flight_no:4s}\t\t{dep}\t{arr}\t{start_time}\t\t{end_time}\t\t{block:3.1f}'
                 .format(
                     flight_no=f.id, dep=f.dep,
                     arr=f.arr,
-                    start_time=f.time_lt.strftime('%H:%M'),
-                    end_time=f.time_lt.strftime('%H:%M'),
-                    block=f.time_lt.strftime('%H:%M')
+                    start_time=nice_time(f.dep_lt),
+                    end_time=nice_time(f.arr_lt),
+                    block=f.block_time
                 )
             )
 
