@@ -19,7 +19,7 @@ Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft'
 MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS = 1.0
 MINIMUM_FLIGHT_PERCENT_DISTANCE= 10
 MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
-FSX_DIRECTORY = r'..\data\FSX'
+FSX_DIRECTORY = os.path.join('.', 'data', 'FSX')
 MAXIMUM_FLIGHT_TIME_HRS = 14.0
 
 
