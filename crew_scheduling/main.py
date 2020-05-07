@@ -126,13 +126,23 @@ if __name__ == '__main__':
 
     old_aircraft_id = pilot.aircraft_id
     pilot = company.assign_aircraft(pilot)
+    company.assign_grade(pilot)
     if pilot.aircraft_id != old_aircraft_id:
         logger.info(
             'Congratulations! You have been assigned to aircraft {}'
             .format(pilot.aircraft_id)
         )
-    schedule = company.assign_roster(pilot)
+    schedule = company.assign_roster(pilot, args.start_date)
     logger.info(
         '{}'
-        .format(schedule)
+            .format(schedule)
     )
+
+    file_out = 'schedule_{}_{}.txt'\
+        .format(
+        pilot.name, args.start_date.strftime('%d_%m_%y')
+    )
+    logger.info(
+        'writing schedule file "{}"'.format(file_out)
+    )
+    company.format_schedule(schedule, file_out)

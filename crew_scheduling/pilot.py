@@ -29,7 +29,8 @@ class Pilot:
         self.hours = 0.0
         self.hub = config.get('DEFAULT', 'hub')
         self.id = config.get('DEFAULT', 'id')
-        self.last_airport = None
+        self.last_airport = self.hub if 'None' in config.get('DEFAULT', 'last_airport') \
+            else config.get('DEFAULT', 'last_airport')
 
     def get_company_file(self):
         return self.company_file

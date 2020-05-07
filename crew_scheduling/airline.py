@@ -1,7 +1,7 @@
 # import pickle
 import collections
 import yaml
-import datetime
+from datetime import datetime, timedelta, time
 import logging
 import random
 import os
@@ -24,14 +24,14 @@ MAXIMUM_FLIGHT_TIME_HRS = 14.0
 
 
 def lmt2utc(latitude_deg, lmt):
-    deltat = datetime.timedelta(hours=latitude_deg/15.0)
+    deltat = timedelta(hours=latitude_deg/15.0)
     utc = lmt - deltat
 
     return utc
 
 
 def utc2lmt(latitude_deg, utc):
-    deltat = datetime.timedelta(hours=latitude_deg/15.0)
+    deltat = timedelta(hours=latitude_deg/15.0)
     lmt = utc + deltat
 
     return lmt
@@ -66,6 +66,10 @@ def load_fleet(fleet_file):
     logger.info('done')
 
     return aircrafts
+
+
+def nice_time(d):
+    return d.strftime('%d/%m/%y %H:%M')
 
 
 def find_min_range_aircraft(aircrafts):
@@ -239,7 +243,7 @@ class Airline:
                     D = distance(Pdep, Parr)
                     aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                     flight = Flight(id=flight_number, arr=arr, dep=dep,
-                                    time_lt=datetime.time(hour=int(hhmm_lt[0:2]), minute=int(hhmm_lt[2:])),
+                                    time_lt=time(hour=int(hhmm_lt[0:2]), minute=int(hhmm_lt[2:])),
                                     distance=D, aircraft=aircrafts)
                     flights[key] = flight
                     key = key + 1
@@ -249,9 +253,11 @@ class Airline:
                         arr = new_flights[0]
                         Parr = Point(self.airports[arr][0], self.airports[arr][1])
                         D = distance(Pdep, Parr)
-                        aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
+                        aircrafts = assign_aircraft_to_route(
+                            self.aircrafts, D, self.default_aircraft
+                        )
                         flight = Flight(id=flight_number, dep=arr, arr=arr,
-                                        time_lt=datetime.time(hour=17, minute=0),
+                                        time_lt=time(hour=17, minute=0),
                                         distance=D, aircraft=aircrafts)
                         flights[key] = flight
                         key = key + 1
@@ -267,7 +273,7 @@ class Airline:
                             dep_time = ceil(MINIMUM_AIRCRAFT_PREPARATION_TIME_HRS+ceil(D/ktas))
 
                             flight = Flight(id=flight_number, dep=dep, arr=arr,
-                                            time_lt=datetime.time(hour=dep_time, minute=0),
+                                            time_lt=time(hour=dep_time, minute=0),
                                             distance=D, aircraft=aircrafts)
                             flights[key] = flight
                             key = key + 1
@@ -308,6 +314,7 @@ class Airline:
             pilot.aircraft_id = list(self.aircrafts.keys())[0]
         else:
             pass
+            # TODO promotion
             # for p in range(len(self.pilots)):
             #     if pilot.name == self.pilots[p].name:
             #         self.pilots[p].aircraft = aircraft
@@ -327,7 +334,7 @@ class Airline:
                 self.pilot.grade = self.grades[i].title
                 return 
 
-    def assign_roster(self, pilot):
+    def assign_roster(self, pilot, start_date):
         """
         The roster is found in the following way: first a random flight is selected form the __routes_tree base on the
         last pilot position. The roster starting time is the flight departure minus one hour. Then a random sequence of
@@ -349,12 +356,12 @@ class Airline:
         Minimum After Duty Rest	                                    10 Hours	    12 Hours.
         Minimum After Duty Rest Period for Multi-Time Zone Flights	14 Hours	    18 Hours.
         """
-        import time
 
         random.seed()
 
         active_pilot_acft_id = pilot.aircraft_id
-        dep_airport = self.hub
+        # dep_airport = self.hub
+        dep_airport = pilot.last_airport
 
         # selective only flights for current active pilot aircraft
         flights = [f for f in self.get_all_connections_from(dep_airport)
@@ -362,23 +369,26 @@ class Airline:
         # suffling flights
         # random.shuffle(flights)
 
-        day = datetime.date.today()
-        delta = datetime.timedelta(hours=1)
+        day = start_date
         # time before first presentation at crew dispatcher
-        flight_departure = datetime.datetime.combine(day, flights[0].time_lt)
-        arr_airport = flights[0].arr
+        delta = timedelta(hours=1)
+        first_flight = random.choice(flights)
+        flight_departure = datetime.combine(
+            day,
+            first_flight.time_lt
+        )
+        arr_airport = first_flight.arr
         start_roster_time = flight_departure - delta
-        dep_utc_time = lmt2utc(self._get_airport_longitude(dep_airport),
-                               flight_departure)
+        dep_utc_time = start_roster_time
         logger.info('Start roster (all times are LMT): {}'
-              .format(start_roster_time.isoformat()))
+              .format(start_roster_time.strftime('%d/%m/%y %H:%M')))
         speed = self.get_aircraft_ktas(active_pilot_acft_id)
-        ft = flights[0].distance/speed
+        ft = first_flight.distance/speed
         logger.debug(
             '{} {} {} {}'
-            .format(flights[0].dep, flights[0].arr,
-                    dep_utc_time, flights[0].id))
-        del flights[0]  # first flight is starting flight. Removing from list.
+            .format(first_flight.dep, first_flight.arr,
+                    nice_time(dep_utc_time), first_flight.id))
+        del first_flight
 
         roster = []
         build_roster = True
@@ -387,45 +397,64 @@ class Airline:
                    if active_pilot_acft_id in list(f.aircraft.keys())]
 
         while build_roster:
-            flight = random.choice(flights)
+            try:
+                flight = random.choice(flights)
+            except Exception as e:
+                logger.error(e)
             ft = flight.distance/speed
-            arr_utc_time = dep_utc_time + datetime.timedelta(hours=ft)
-            # arr_lmt_time =
-            # utc2lmt(self.getAirportLongitude(flight.arr), arr_utc_time)
+            arr_utc_time = dep_utc_time + timedelta(hours=ft)
+            arr_utc_time = arr_utc_time + timedelta(minutes=45)  # turnover /change of aircraft 45 min
             total_ft = total_ft \
                 + (arr_utc_time - dep_utc_time).total_seconds()/3600.0
             new_dep_airport = flight.arr
             if total_ft < MAXIMUM_FLIGHT_TIME_HRS:
                 roster.append(flight)
-                # print(ft)
                 flights = \
                     [f for f in self.get_all_connections_from(new_dep_airport)
-                     if active_pilot_acft_id in list(f.aircraft.keys())]
+                     if active_pilot_acft_id in list(f.aircraft.keys()) and
+                     f.time_lt >= arr_utc_time.time()]
             else:
                 build_roster = False
 
         for r in roster:
             logger.debug(
-                '{2} {3} {0} {1}'
-                .format(datetime.datetime.combine(day, r.time_lt).isoformat(),
-                        r.id, r.dep, r.arr)
+                '{dep} {arr} {date} {code}{flight_no}'
+                .format(
+                    date=nice_time(datetime.combine(day, r.time_lt)),
+                    dep=r.dep, arr=r.arr,
+                    code=self.code, flight_no=r.id
+                )
             )
-        logger.debug('Total flight time: {} hours'.format(total_ft))
-
-
-def format_schedule(flights):
-    header = ['Flt. Nr.    Dep     Arr     STD(LT)             STA(LT)    Blk. Hrs.    Start      End  ',
-              '----------------------------------------------------------------------------------------']
-    #          AT752       GMMN    EGLL    2020-03-01 07:00    10:30      03:30        06:30
-    #          AT775       EGLL    GMMN    2020-03-01 11:25    15:00      06:00
-    #          REPOSITION TO GMME                                         08:30                   16:00
-    #          AT063       GMME    LIML    2020-03-02 10:45    14:45      04:00        14:00
-    line = []
-    for d, a in flights:
-        line.append(
-            '{dep}  {arr}'.format(dep=d, arr=a)
+        logger.debug(
+            'Total flight time: {} hours'
+                .format(total_ft)
         )
 
-    text = '\n'.join(header + line)
+        return roster
 
-    return text
+
+    def format_schedule(self, flights, file_out):
+        header = ['Flt. Nr.\t\tDep\t\tArr\t\tSTD(LT)\t\tSTA(LT)\t\tBlk. Hrs.\t\tStart\t\t\End  ',
+                  '----------------------------------------------------------------------------------------']
+        #          AT752       GMMN    EGLL    2020-03-01 07:00    10:30      03:30        06:30
+        #          AT775       EGLL    GMMN    2020-03-01 11:25    15:00      06:00
+        #          REPOSITION TO GMME                                         08:30                   16:00
+        #          AT063       GMME    LIML    2020-03-02 10:45    14:45      04:00        14:00
+        line = []
+        for f in flights:
+            line.append(
+                '\t{flight_no:4s}\t\t{dep}\t{arr}\t{start_time}\t\t{end_time}\t\t{block}'
+                .format(
+                    flight_no=f.id, dep=f.dep,
+                    arr=f.arr,
+                    start_time=f.time_lt.strftime('%H:%M'),
+                    end_time=f.time_lt.strftime('%H:%M'),
+                    block=f.time_lt.strftime('%H:%M')
+                )
+            )
+
+        text = '\n'.join(header + line)
+
+        fout = open(file_out, 'w')
+        fout.write(text)
+        fout.close()
