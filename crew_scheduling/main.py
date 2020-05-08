@@ -127,11 +127,10 @@ if __name__ == '__main__':
     old_aircraft_id = pilot.aircraft_id
     pilot = company.assign_aircraft(pilot)
     company.assign_grade(pilot)
-    print(
-        [f for f in company.get_all_connections_from('GMMW')
+    print(company.get_all_connections_from('GMAD'))
+    flights = \
+        [f for f in company.get_all_connections_from('GMAD')
          if 'AT75' in list(f.aircraft.keys())]
-    )
-    exit()
     if pilot.aircraft_id != old_aircraft_id:
         logger.info(
             'Congratulations! You have been assigned to aircraft {}'
@@ -140,12 +139,12 @@ if __name__ == '__main__':
     schedule = company.assign_roster(pilot, args.start_date)
     logger.info(
         '{}'
-            .format(schedule)
+        .format(schedule)
     )
 
     file_out = 'schedule_{}_{}.txt'\
         .format(
-        pilot.name, args.start_date.strftime('%d_%m_%y')
+         pilot.name, args.start_date.strftime('%d_%m_%y')
     )
     logger.info(
         'writing schedule file "{}"'.format(file_out)
