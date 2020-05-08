@@ -127,10 +127,6 @@ if __name__ == '__main__':
     old_aircraft_id = pilot.aircraft_id
     pilot = company.assign_aircraft(pilot)
     company.assign_grade(pilot)
-    print(company.get_all_connections_from('GMAD'))
-    flights = \
-        [f for f in company.get_all_connections_from('GMAD')
-         if 'AT75' in list(f.aircraft.keys())]
     if pilot.aircraft_id != old_aircraft_id:
         logger.info(
             'Congratulations! You have been assigned to aircraft {}'
