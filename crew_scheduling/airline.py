@@ -199,7 +199,7 @@ class Airline:
 
         # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
         # dictionary. Usage: airports[icao] = (lat, lon)
-        file = 'r5.csv' #  runways.xml
+        file = 'r5.csv'  # runways.xml
         logger.debug('reading FSX data file {}'.format(file))
         self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
         self.hub = hub

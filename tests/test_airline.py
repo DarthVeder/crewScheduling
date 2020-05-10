@@ -34,7 +34,7 @@ class TestLoadFleet(unittest.TestCase):
 
     def test_build_route(self):
         with mock.patch('builtins.open', mock.mock_open(read_data=schedule_data)):
-            flights = self.company.build_routes(file_schedule='foo')
+            flights = self.company._build_routes(file_schedule='foo')
 
         for f in flights:
             for a in flights[f].aircraft:
