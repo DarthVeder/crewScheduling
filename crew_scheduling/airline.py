@@ -23,7 +23,7 @@ MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = os.path.join('.', 'data', 'FSX')
 MAXIMUM_FLIGHT_TIME_HRS = 10.0
 MAXIMUM_BLOCK_HOURS = 14.0
-MINIMUM_REST_HRS = 10.0
+# MINIMUM_REST_HRS = 10.0
 
 
 def lmt2utc(latitude_deg, lmt):
@@ -325,8 +325,10 @@ class Airline:
         return self._routes_tree[airport_icao]
 
     def assign_aircraft(self, pilot):
-        if pilot.aircraft_id is None:
-            pilot.aircraft_id = list(self.aircrafts.keys())[0]
+        if pilot.get('aircraft_id') is None:
+            pilot.set_aircraft(
+                list(self.aircrafts.keys())[0]
+            )
         else:
             pass
             # TODO promotion
@@ -337,14 +339,15 @@ class Airline:
         return pilot
 
     def assign_grade(self, pilot):
-        diff = pilot.hours * \
-             (-pilot.hours + self.grades[1].hours)
+        pilot_hours = pilot.get('hours')
+        diff = pilot_hours * \
+             (-pilot_hours + self.grades[1].hours)
         if diff >= 0:
             pilot.grade = self.grades[1].title
             return
         for i in range(1,len(self.grades)):
-            diff = (pilot.hours - self.grades[i-1].hours) * \
-                   (-pilot.hours + self.grades[i].hours)
+            diff = (pilot_hours - self.grades[i-1].hours) * \
+                   (-pilot_hours + self.grades[i].hours)
             if diff >= 0:
                 self.pilot.grade = self.grades[i].title
                 return 
@@ -374,8 +377,8 @@ class Airline:
         day = start_date
         random.seed()
 
-        active_pilot_acft_id = pilot.aircraft_id
-        dep_airport = pilot.last_airport
+        active_pilot_acft_id = pilot.get('aircraft_id')
+        dep_airport = pilot.get('last_airport')
 
         flights = [f for f in self.get_all_connections_from(dep_airport)
                    if active_pilot_acft_id in list(f.aircraft.keys())]
@@ -392,13 +395,19 @@ class Airline:
         while True:
             flight = random.choice(flights)
             ft = flight.distance/speed
-            dep_utc_time = datetime.combine(
-                day,
-                flight.time_lt
-            )
             if set_day:
                 set_day = False
                 day = datetime.combine(day.date(), flight.time_lt)
+                dep_utc_time = datetime.combine(
+                    day,
+                    flight.time_lt
+                )
+            else:
+                previous_flight = roster[-1].arr_lt
+                dep_utc_time = datetime.combine(
+                    previous_flight.date(),
+                    flight.time_lt
+                )
             if not schedule.get('start'):
                 schedule.update(
                     {
@@ -408,6 +417,10 @@ class Airline:
             arr_utc_time = dep_utc_time + timedelta(hours=ft)
             total_ft += ft
             if total_ft > MAXIMUM_FLIGHT_TIME_HRS:
+                logger.debug(
+                    'reached maximum flight hours {}({})'
+                    .format(total_ft, MAXIMUM_FLIGHT_TIME_HRS)
+                )
                 break
             arr_utc_time = arr_utc_time + timedelta(minutes=AIRCRAFT_TURNOVER_HRS)
             if len(roster) == 0:
@@ -416,6 +429,10 @@ class Airline:
                 delta = (dep_utc_time  - roster[-1].arr_lt).total_seconds()/3600.0
             block_time = block_time + ft + delta
             if block_time > MAXIMUM_BLOCK_HOURS:
+                logger.debug(
+                    'reached maximum block hours {}({})'
+                        .format(block_time, MAXIMUM_BLOCK_HOURS)
+                )
                 break
             new_dep_airport = flight.arr
             roster.append(
@@ -436,8 +453,11 @@ class Airline:
                  if active_pilot_acft_id in list(f.aircraft.keys()) and
                  f.time_lt >= arr_utc_time.time()]
             if len(flights) == 0:
-                    # no flights. Pilot stops till next day.
-                    break
+                # no flights. Pilot stops till next day.
+                logger.debug(
+                    'no more flights for the day'
+                )
+                break
 
         logger.debug(
             'Schedule for {}'
@@ -455,6 +475,10 @@ class Airline:
         logger.debug(
             'Total flight time: {} hours'
               .format(total_ft)
+        )
+        schedule.setdefault(
+            'last_airport',
+            roster[-1].arr
         )
 
         return schedule

@@ -117,20 +117,24 @@ if __name__ == '__main__':
         exit(1)
 
     logger.info(
-        'loading company file {}'.format(pilot.get_company_file())
+        'loading company file {}'
+        .format(pilot.get('company_file'))
     )
     logger.info(
-        'pilot hub: '.format(pilot.get_hub())
+        'pilot hub: '
+        .format(pilot.get('hub'))
     )
-    company = Airline(pilot.get_hub(), pilot.get_company_file())
+    company = Airline(
+        pilot.get('hub'), pilot.get('company_file')
+    )
 
-    old_aircraft_id = pilot.aircraft_id
+    old_aircraft_id = pilot.get('aircraft_id')
     pilot = company.assign_aircraft(pilot)
     company.assign_grade(pilot)
-    if pilot.aircraft_id != old_aircraft_id:
+    if pilot.get('aircraft_id') != old_aircraft_id:
         logger.info(
             'Congratulations! You have been assigned to aircraft {}'
-            .format(pilot.aircraft_id)
+            .format(pilot.get('aircraft_id'))
         )
     schedule = company.assign_roster(pilot, args.start_date)
     logger.info(
@@ -138,11 +142,14 @@ if __name__ == '__main__':
         .format(schedule)
     )
 
+
     file_out = 'schedule_{}_{}.txt'\
         .format(
-         pilot.name, args.start_date.strftime('%d_%m_%y')
+         pilot.get('name'), args.start_date.strftime('%d_%m_%y')
     )
     logger.info(
         'writing schedule file "{}"'.format(file_out)
     )
     company.format_schedule(schedule, file_out)
+    pilot.set_last_airport(schedule.get('last_airport'))
+    pilot.save_status()
