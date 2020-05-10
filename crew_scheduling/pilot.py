@@ -66,12 +66,3 @@ class Pilot:
 
     def get_data(self):
         return self.data
-
-
-if __name__ == '__main__':
-    file = r'C:\home\FSXTools\crewScheduling\data\pilots\ram_malik.cfg'
-    pilot = Pilot(file)
-
-    for k, v in pilot.get_data().items():
-        print('{}: {}'.format(k, v))
-

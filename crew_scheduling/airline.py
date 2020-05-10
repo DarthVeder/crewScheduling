@@ -23,7 +23,6 @@ MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = os.path.join('.', 'data', 'FSX')
 MAXIMUM_FLIGHT_TIME_HRS = 10.0
 MAXIMUM_BLOCK_HOURS = 14.0
-# MINIMUM_REST_HRS = 10.0
 
 
 def lmt2utc(latitude_deg, lmt):
@@ -123,10 +122,10 @@ def assign_aircraft_to_route(aircrafts, distance_to_fly, default_aircraft):
                 .format(regulated_distance)
         )
         proposed_aircrafts = default_aircraft
-    logger.debug(
-        'distance {}, proposed aircraft {}'
-        .format(regulated_distance, proposed_aircrafts)
-    )
+    # logger.debug(
+    #     'distance {}, proposed aircraft {}'
+    #     .format(regulated_distance, proposed_aircrafts)
+    # )
 
     return proposed_aircrafts
 

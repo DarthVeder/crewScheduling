@@ -45,14 +45,3 @@ def distance(P1, P2):
     dist_nm = dist * EARTH_RADIUS_NM
 
     return dist_nm
-
-
-if __name__ == '__main__':
-    P1 = Point(0, 0)
-    P2 = Point(34.4, 56.77)
-
-    D = distance(P2, P1)
-
-    # print(D) # should be 3787.049908422731, versus WGS84 3,789 nm
-    assert(abs(D - 3787.049908422731) < 1e-12), \
-        "Something is wrong in distance(P1, P2)"
