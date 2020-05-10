@@ -33,7 +33,12 @@ class Pilot:
             else config.get('DEFAULT', 'last_airport'))
 
     def save_status(self):
-        pass
+        config = configparser.ConfigParser()
+        for k, v in self.data.items():
+            config['DEFAULT'][k] = str(v)
+        file_out = self.data.get('cfg_file')
+        with open(file_out, 'w') as fout:
+            config.write(fout)
 
     def set_aircraft(self, new_aircraft_id):
         self.data['aircraft_id'] = new_aircraft_id
@@ -56,9 +61,8 @@ class Pilot:
         )
 
     def view_data(self):
-        pass
-        # for k, v in self.data.items():
-        #     logger.info('{}: {}'.format(k, v))
+        for k, v in self.data.items():
+            logger.info('{}: {}'.format(k, v))
 
     def get_data(self):
         return self.data

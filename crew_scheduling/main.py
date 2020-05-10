@@ -152,4 +152,8 @@ if __name__ == '__main__':
     )
     company.format_schedule(schedule, file_out)
     pilot.set_last_airport(schedule.get('last_airport'))
+    logging.info(
+        'saving pilot configuration file "{}"'
+        .format(pilot.get('cfg_file'))
+    )
     pilot.save_status()
