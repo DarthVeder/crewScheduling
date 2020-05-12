@@ -156,4 +156,5 @@ if __name__ == '__main__':
         'saving pilot configuration file "{}"'
         .format(pilot.get('cfg_file'))
     )
-    pilot.save_status()
+    print(pilot.get_total_hours())
+    # pilot.save_status()

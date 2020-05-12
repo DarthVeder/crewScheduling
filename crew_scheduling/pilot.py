@@ -1,7 +1,10 @@
 import logging
 import configparser
+from datetime import datetime, time, date, timedelta
+import sqlite3
 
 logger = logging.getLogger('crew_scheduler.' + __name__)
+
 
 class Pilot:
     def __init__(self, pilot_file=None):
@@ -31,6 +34,32 @@ class Pilot:
             'last_airport', config.get('DEFAULT', 'hub')
             if 'None' in config.get('DEFAULT', 'last_airport')
             else config.get('DEFAULT', 'last_airport'))
+        self.data.setdefault('pilot_db', config.get('DEFAULT', 'pilot_db'))
+
+    def get_total_hours(self):
+        try:
+            conn = sqlite3.connect(self.get('pilot_db'))
+            conn.row_factory = sqlite3.Row
+        except Exception as e:
+            logger.error(
+                'pilots db connection error. err={}'
+                .format(e)
+            )
+            exit(1)
+
+        c = conn.cursor()
+        flights = c.execute('select * from flights where UserName = ?',
+                            (self.get('id'),))
+
+        total_time = timedelta(seconds=0)
+        for f in flights:
+            h, m , s = f['TotalBlockTime'].split(':')
+            total_time = total_time + timedelta(hours=int(h), minutes=int(m),
+                                                seconds=int(s))
+
+        conn.close()
+
+        return total_time.total_seconds()/3600.0
 
     def save_status(self):
         config = configparser.ConfigParser()
