@@ -1,4 +1,15 @@
-AT75:
+progression:
+        ATR
+        E190
+        B737
+        B738
+        B38M
+        B763
+        B747
+        B788
+        B789
+
+ATR:
         name: ATR 72-500
         ktas: 460 # kt
         range: 850 # nm

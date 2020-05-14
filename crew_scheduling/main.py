@@ -142,7 +142,6 @@ if __name__ == '__main__':
         .format(schedule)
     )
 
-
     file_out = 'schedule_{}_{}.txt'\
         .format(
          pilot.get('name'), args.start_date.strftime('%d_%m_%y')
@@ -156,5 +155,5 @@ if __name__ == '__main__':
         'saving pilot configuration file "{}"'
         .format(pilot.get('cfg_file'))
     )
-    print(pilot.get_total_hours())
-    # pilot.save_status()
+
+    pilot.save_status()

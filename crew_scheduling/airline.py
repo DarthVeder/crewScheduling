@@ -19,24 +19,30 @@ Schedule = collections.namedtuple('Schedule', 'id dep arr dep_lt arr_lt block_ti
 PRESENTATION_HRS = 45/60
 AIRCRAFT_TURNOVER_HRS = 1.0
 MINIMUM_FLIGHT_PERCENT_DISTANCE= 10
-MINIMUM_FLIGHT_TIME_DISTANCE_HRS = 5/60
 FSX_DIRECTORY = os.path.join('.', 'data', 'FSX')
 MAXIMUM_FLIGHT_TIME_HRS = 10.0
 MAXIMUM_BLOCK_HOURS = 14.0
+MINIMUM_FLIGHTS_BEFORE_PROMOTION = 15
+MAXIMUM_VISITED_DIFFERENCE = 5
+# TODO
+PROBABILITY_SPECIAL_MISSION = 15
+SPECIAL_MISSIONS = [
+    'retrieve new airplane',
+    'reposition aircraft'
+]
 
-
-def lmt2utc(latitude_deg, lmt):
-    deltat = timedelta(hours=latitude_deg/15.0)
-    utc = lmt - deltat
-
-    return utc
-
-
-def utc2lmt(latitude_deg, utc):
-    deltat = timedelta(hours=latitude_deg/15.0)
-    lmt = utc + deltat
-
-    return lmt
+# def lmt2utc(latitude_deg, lmt):
+#     deltat = timedelta(hours=latitude_deg/15.0)
+#     utc = lmt - deltat
+#
+#     return utc
+#
+#
+# def utc2lmt(latitude_deg, utc):
+#     deltat = timedelta(hours=latitude_deg/15.0)
+#     lmt = utc + deltat
+#
+#     return lmt
 
 
 def load_fsx_data(file_fsx):
@@ -59,15 +65,17 @@ def load_fleet(fleet_file):
     logger.info('loading fleet')
     with open(fleet_file, 'r') as file:
         aircrafts = yaml.full_load(file)
+    progression = aircrafts.pop('progression')
     logger.debug('read {} aircrafts'.format(len(aircrafts)))
     for a, data in aircrafts.items():
         logger.debug(
             'aicraft {}, data {}'
             .format(a, data)
         )
+    logger.info('aircraft progression: {}'.format(progression))
     logger.info('done')
 
-    return aircrafts
+    return progression, aircrafts
 
 
 def nice_date(d):
@@ -128,6 +136,33 @@ def assign_aircraft_to_route(aircrafts, distance_to_fly, default_aircraft):
     # )
 
     return proposed_aircrafts
+
+
+def select_flight(flights, visited):
+    selected_flights = sorted(
+        flights,
+        key=lambda x: visited.get(x.arr, 0)
+    )
+    min_visited = visited.get(
+        selected_flights[0].arr, 0
+    )
+    max_visited = visited.get(
+        selected_flights[-1].arr, 0
+    )
+    delta = max_visited - min_visited
+    logger.debug('delta visited: {}'.format(delta))
+    if delta > MAXIMUM_VISITED_DIFFERENCE:
+        logger.debug('clipping highest visited destination')
+        selected_flights = [
+            f for f in selected_flights
+            if visited.get(f.arr, 0) - min_visited <= MAXIMUM_VISITED_DIFFERENCE
+        ]
+        flight = random.choice(selected_flights)
+    else:
+        flight = random.choice(flights)
+
+    return flight
+
 
 
 class Airline:
@@ -203,7 +238,8 @@ class Airline:
         self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
         self.hub = hub
 
-        self.aircrafts = load_fleet(config['DEFAULT'].get('fleet'))
+        self.progression, self.aircrafts = \
+            load_fleet(config['DEFAULT'].get('fleet'))
         self.default_aircraft = find_min_range_aircraft(self.aircrafts)
         self.flights = self._build_routes(config['DEFAULT'].get('schedule'), print_to_file=True)
 
@@ -329,11 +365,18 @@ class Airline:
                 list(self.aircrafts.keys())[0]
             )
         else:
-            pass
-            # TODO promotion
-            # for p in range(len(self.pilots)):
-            #     if pilot.name == self.pilots[p].name:
-            #         self.pilots[p].aircraft = aircraft
+            paid = pilot.get('aircraft_id')
+            number_of_flights = pilot.get_flight_with_aircraft(
+                paid
+            )
+            if number_of_flights > MINIMUM_FLIGHTS_BEFORE_PROMOTION:
+                idx = self.progression.index(paid)
+                if idx < len(self.progression):
+                    pilot.set_aircraft(self.progression[idx + 1])
+                    logger.info(
+                        'Congratulations! You have upgraded to {}'
+                        .format(self.progression[idx + 1])
+                    )
 
         return pilot
 
@@ -348,8 +391,17 @@ class Airline:
             diff = (pilot_hours - self.grades[i-1].hours) * \
                    (-pilot_hours + self.grades[i].hours)
             if diff >= 0:
-                self.pilot.grade = self.grades[i].title
-                return 
+                pilot.grade = self.grades[i].title
+                return
+        print(pilot.grade.lower())
+        if 'captain' in pilot.grade.lower() and not pilot.get('upgraded'):
+            pilot.upgrade()
+            pilot.set_aircraft(self.progression[0])
+            logger.info(
+                'Congratulations! You have been promoted to the rank of Captain! '
+                'You have been reassigned to aircraft {}'
+                .format(pilot.set_aircraft(self.progression[0]))
+            )
 
     def assign_roster(self, pilot, start_date):
         """
@@ -385,6 +437,7 @@ class Airline:
         presentation = timedelta(hours=PRESENTATION_HRS)
         speed = self.get_aircraft_ktas(active_pilot_acft_id)
 
+        visited = pilot.get_visited()
         schedule = {}
         schedule.setdefault('start', None)
         roster = schedule.setdefault('roster', [])
@@ -392,7 +445,7 @@ class Airline:
         set_day = True
         block_time = PRESENTATION_HRS
         while True:
-            flight = random.choice(flights)
+            flight = select_flight(flights, pilot.get_visited())
             ft = flight.distance/speed
             if set_day:
                 set_day = False
@@ -434,6 +487,11 @@ class Airline:
                 )
                 break
             new_dep_airport = flight.arr
+            nd = visited.setdefault(flight.dep, 0) + 1
+            na = visited.setdefault(flight.arr, 0) + 1
+            visited.update({flight.dep: nd})
+            visited.update({flight.arr: na})
+            pilot.update_visited(visited)
             roster.append(
                 Schedule(
                     id='{}{}'.format(self.code, flight.id),
