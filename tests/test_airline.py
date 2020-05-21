@@ -21,7 +21,8 @@ Flight=492,GMMH,GMAD,2,2228,0,GMMN,,,,
 '''
 
 fleet_data = \
-    '''progression:
+    '''
+progression:
         ATR
         B737
         B747
@@ -42,30 +43,32 @@ B744:
         range: 7260 # nm
 '''
 
+
 class TestLoadFleet(unittest.TestCase):
-    @mock.patch('crew_scheduling.airline.Airline')
+    @mock.patch('crew_scheduling.airline.Airline', autospec=True)
     def setUp(self, mock_airline):
         logging.disable(logging.CRITICAL)
+        mock_airline.name = 'Test Airline'
+        mock_airline.aircrafts = {}
+        mock_airline.hub = 'GMMN'
+        mock_airline.progression = ''
         self.company = mock_airline
-        # self.company = Airline(
-        #     hub='GMMN',
-        #     config_file=os.path.join('data', 'RoyalAirMaroc.cfg')
-        # )
         logging.disable(logging.NOTSET)
 
     def test_load_fleet(self):
         logging.disable(logging.CRITICAL)
         with mock.patch('builtins.open',
                         mock.mock_open(read_data=fleet_data)):
-            load_fleet(
-                'fake_path'
+            self.company.progression, self.company.aircrafts = \
+                load_fleet(
+                    'fake_path'
             )
         logging.disable(logging.NOTSET)
 
         self.assertEqual(self.company.aircrafts['B744']['range'], B747_range_ok)
 
     def test_build_route(self):
-        with mock.patch('builtins.open', mock.mock_open(read_data=schedule_data)):
+        with mock.patch('builtins.open', mock.mock_open(read_data=schedule_data)) as mock_file:
             flights = self.company._build_routes(file_schedule='test_data')
 
         for f in flights:
