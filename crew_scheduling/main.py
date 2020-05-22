@@ -59,6 +59,14 @@ if __name__ == '__main__':
         required=True
     )
     parser.add_argument(
+        '--save',
+        help='save pilot status on exit. Allows continuation assignment',
+        dest='save',
+        required=False,
+        default=False,
+        action='store_true'
+    )
+    parser.add_argument(
         '--log-level',
         dest='log_level',
         choices=['info', 'debug'],
@@ -101,6 +109,7 @@ if __name__ == '__main__':
 
     logger.info('starting')
     logger.debug('args: {}'.format(args))
+    save = args.save
 
     try:
         logger.info(
@@ -121,7 +130,7 @@ if __name__ == '__main__':
         .format(pilot.get('company_file'))
     )
     logger.info(
-        'pilot hub: '
+        'pilot hub: {}'
         .format(pilot.get('hub'))
     )
     company = Airline(
@@ -156,4 +165,5 @@ if __name__ == '__main__':
         .format(pilot.get('cfg_file'))
     )
 
-    pilot.save_status()
+    if save:
+        pilot.save_status()

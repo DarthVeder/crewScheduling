@@ -1,4 +1,6 @@
-# import pickle
+import pytz
+from tzwhere import tzwhere
+import xml.etree.ElementTree as ET
 import collections
 import yaml
 from datetime import datetime, timedelta, time
@@ -15,6 +17,7 @@ logger = logging.getLogger('crew_scheduler.' + __name__)
 Grade = collections.namedtuple('Grade', 'hours title')
 Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft')
 Schedule = collections.namedtuple('Schedule', 'id dep arr dep_lt arr_lt block_time')
+tz = tzwhere.tzwhere()
 
 PRESENTATION_HRS = 45/60
 AIRCRAFT_TURNOVER_HRS = 1.0
@@ -25,27 +28,52 @@ MAXIMUM_BLOCK_HOURS = 14.0
 MINIMUM_FLIGHTS_BEFORE_PROMOTION = 15
 MAXIMUM_VISITED_DIFFERENCE = 5
 # TODO
-PROBABILITY_SPECIAL_MISSION = 15
-SPECIAL_MISSIONS = [
-    'retrieve new airplane',
-    'reposition aircraft'
-]
+# PROBABILITY_SPECIAL_MISSION = 15
+# SPECIAL_MISSIONS = [
+#     'retrieve new airplane',
+#     'reposition aircraft'
+# ]
 
-# def lmt2utc(latitude_deg, lmt):
-#     deltat = timedelta(hours=latitude_deg/15.0)
-#     utc = lmt - deltat
-#
-#     return utc
-#
-#
-# def utc2lmt(latitude_deg, utc):
-#     deltat = timedelta(hours=latitude_deg/15.0)
-#     lmt = utc + deltat
-#
-#     return lmt
+
+def set_timezone(dt=None, tzone=None):
+    try:
+        dt.replace(tzinfo=tzone)
+    except Exception as e:
+        logger.error('wrong time zone {}'.format(tzone))
+        exit(1)
+
+def switch_timezone(dt=None, orig_tz=None, dst_tz=None):
+    if dt.tzinfo is not None:
+        # force timezone of dt to orig_tz
+        dt.replace(tzinfo=None)
+    dt = pytz.timezone(orig_tz).localize(dt)
+    return dt.astimezone(pytz.timezone(dst_tz))
+
+
+def find_timezone(latitude=0, longitude=0):
+    return tz.tzNameAt(latitude, longitude)
 
 
 def load_fsx_data(file_fsx):
+    airports = {}
+    with open(file_fsx,'r') as fin:
+        tree = ET.parse(fin)
+
+    root = tree.getroot()
+    for a in root.findall('ICAO'):
+        a_id = a.get('id')
+        country = a.find('Country').text
+        lon = float(a.find('Longitude').text)
+        lat = float(a.find('Latitude').text)
+        airports[a_id] = {
+            'latitude': lat,
+            'longitude': lon,
+            'country': country
+        }
+
+    return airports
+
+def load_fsx_data_old(file_fsx):
     # TODO: use runways.xml and add country information
     airports = {}
     with open(file_fsx, 'r') as fin:
@@ -54,7 +82,11 @@ def load_fsx_data(file_fsx):
             # the airport has the same coordinates as the runway.
             (icao, hdg, lat, lon, *trash ) = line.split(',')
             if icao not in airports:
-                airports[icao] = (float(lat), float(lon))
+                airports[icao] = {
+                    'latitude': float(lat),
+                    'longitude': float(lon),
+                    'country': None
+                }
 
     return airports
 
@@ -233,7 +265,7 @@ class Airline:
 
         # Loading FSX airports from MakeRunways file r5.csv. Storing data in an airports
         # dictionary. Usage: airports[icao] = (lat, lon)
-        file = 'r5.csv'  # runways.xml
+        file = 'runways.xml' #'r5.csv'  # runways.xml
         logger.debug('reading FSX data file {}'.format(file))
         self.airports = load_fsx_data(FSX_DIRECTORY + os.sep + file)
         self.hub = hub
@@ -248,7 +280,7 @@ class Airline:
                 self.grades, self.aircrafts, self.flights)
 
     def _get_airport_longitude(self, icao):
-        return self.airports[icao][1]
+        return self.airports[icao].get('longitude', None)
 
     def show_aircraft(self):
         for a, data in self.aicrafts:
@@ -282,14 +314,20 @@ class Airline:
                 line = line.rstrip()  # Removing final \n in line
                 if line[0] not in comments:
                     flight_text = line.split('=')[1]
-                    (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
+                    (flight_number, dep_lt, arr_lt, size, hhmm_lt, *other) = flight_text.split(',')
                     logger.debug(
                         'flight nr {}, dep {}, arr {}'
                         .format(flight_number, dep, arr)
                     )
                     # other can contain flight info, so it should be checked
-                    Pdep = Point(self.airports[dep][0], self.airports[dep][1])
-                    Parr = Point(self.airports[arr][0], self.airports[arr][1])
+                    Pdep = Point(
+                        self.airports[dep].get('latitude'),
+                        self.airports[dep].get('longitude')
+                    )
+                    Parr = Point(
+                        self.airports[arr].get('latitude'),
+                        self.airports[arr].get('longitude')
+                    )
                     D = distance(Pdep, Parr)
                     aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                     flight = Flight(id=flight_number, arr=arr, dep=dep,
@@ -301,7 +339,10 @@ class Airline:
                     new_flights = [x for x in other[1:] if x != '']
                     if new_flights:
                         arr = new_flights[0]
-                        Parr = Point(self.airports[arr][0], self.airports[arr][1])
+                        Parr = Point(
+                            self.airports[arr].get('latitude'),
+                            self.airports[arr].get('longitude')
+                        )
                         D = distance(Pdep, Parr)
                         aircrafts = assign_aircraft_to_route(
                             self.aircrafts, D, self.default_aircraft
@@ -314,8 +355,14 @@ class Airline:
                         for i in range(1, len(new_flights)):
                             dep = new_flights[i-1]
                             arr = new_flights[i]
-                            Pdep = Point(self.airports[dep][0], self.airports[dep][1])
-                            Parr = Point(self.airports[arr][0], self.airports[arr][1])
+                            Pdep = Point(
+                                self.airports[dep].get('latitude'),
+                                self.airports[dep].get('longitude')
+                            )
+                            Parr = Point(
+                                self.airports[arr].get('latitude'),
+                                self.airports[arr].get('longitude')
+                            )
                             D = distance(Pdep, Parr)
                             aircrafts = assign_aircraft_to_route(self.aircrafts, D, self.default_aircraft)
                             aircraft_id = list(aircrafts.keys())[0]
@@ -447,6 +494,9 @@ class Airline:
         while True:
             flight = select_flight(flights, pilot.get_visited())
             ft = flight.distance/speed
+            lat = self.airports[flight.dep].get('latitude')
+            lon = self.airports[flight.dep].get('longitude')
+            tz_dep = find_timezone(latitude=lat, longitude=lon)
             if set_day:
                 set_day = False
                 day = datetime.combine(day.date(), flight.time_lt)
@@ -454,19 +504,28 @@ class Airline:
                     day,
                     flight.time_lt
                 )
+                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz=pytz.utc)
             else:
                 previous_flight = roster[-1].arr_lt
+                lat = self.airports[roster[-1].arr].get('latitude')
+                lon = self.airports[roster[-1].arr].get('longitude')
+                tz_dep = find_timezone(latitude=lat, longitude=lon)
                 dep_utc_time = datetime.combine(
                     previous_flight.date(),
                     flight.time_lt
                 )
+                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz=pytz.utc)
             if not schedule.get('start'):
                 schedule.update(
                     {
                         'start': day - presentation
                     }
                 )
+            # lat = self.airports[flight.dep].get('latitude')
+            # lon = self.airports[flight.dep].get('longitude')
+            # tz_arr = find_timezone(latitude=lat, longitude=lon)
             arr_utc_time = dep_utc_time + timedelta(hours=ft)
+            # switch_timezone(dt=arr_utc_time, orig_tz=tz_arr, dst_tz=pytz.utc)
             total_ft += ft
             if total_ft > MAXIMUM_FLIGHT_TIME_HRS:
                 logger.debug(
