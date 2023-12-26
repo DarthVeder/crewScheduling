@@ -1,8 +1,8 @@
 import pytz
-from tzwhere import tzwhere
+import yaml
+from timezonefinder import TimezoneFinder
 import xml.etree.ElementTree as ET
 import collections
-import yaml
 from datetime import datetime, timedelta, time
 import logging
 import random
@@ -17,7 +17,8 @@ logger = logging.getLogger('crew_scheduler.' + __name__)
 Grade = collections.namedtuple('Grade', 'hours title')
 Flight = collections.namedtuple('Flight', 'id dep arr time_lt distance aircraft')
 Schedule = collections.namedtuple('Schedule', 'id dep arr dep_lt arr_lt block_time')
-tz = tzwhere.tzwhere()
+tz = TimezoneFinder()
+
 
 PRESENTATION_HRS = 45/60
 AIRCRAFT_TURNOVER_HRS = 1.0
@@ -45,13 +46,15 @@ def set_timezone(dt=None, tzone=None):
 def switch_timezone(dt=None, orig_tz=None, dst_tz=None):
     if dt.tzinfo is not None:
         # force timezone of dt to orig_tz
-        dt.replace(tzinfo=None)
+        dt.replace(tzinfo=orig_tz)
     dt = pytz.timezone(orig_tz).localize(dt)
+
     return dt.astimezone(pytz.timezone(dst_tz))
 
 
 def find_timezone(latitude=0, longitude=0):
-    return tz.tzNameAt(latitude, longitude)
+#    return tz.tzNameAt(latitude, longitude)
+    return tz.timezone_at(lng=longitude, lat=latitude)
 
 
 def load_fsx_data(file_fsx):
@@ -314,7 +317,8 @@ class Airline:
                 line = line.rstrip()  # Removing final \n in line
                 if line[0] not in comments:
                     flight_text = line.split('=')[1]
-                    (flight_number, dep_lt, arr_lt, size, hhmm_lt, *other) = flight_text.split(',')
+                    print(flight_text)
+                    (flight_number, dep, arr, size, hhmm_lt, *other) = flight_text.split(',')
                     logger.debug(
                         'flight nr {}, dep {}, arr {}'
                         .format(flight_number, dep, arr)
@@ -504,7 +508,7 @@ class Airline:
                     day,
                     flight.time_lt
                 )
-                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz=pytz.utc)
+                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz='UTC')
             else:
                 previous_flight = roster[-1].arr_lt
                 lat = self.airports[roster[-1].arr].get('latitude')
@@ -514,7 +518,7 @@ class Airline:
                     previous_flight.date(),
                     flight.time_lt
                 )
-                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz=pytz.utc)
+                switch_timezone(dt=dep_utc_time, orig_tz=tz_dep, dst_tz='UTC')
             if not schedule.get('start'):
                 schedule.update(
                     {
@@ -525,7 +529,7 @@ class Airline:
             # lon = self.airports[flight.dep].get('longitude')
             # tz_arr = find_timezone(latitude=lat, longitude=lon)
             arr_utc_time = dep_utc_time + timedelta(hours=ft)
-            # switch_timezone(dt=arr_utc_time, orig_tz=tz_arr, dst_tz=pytz.utc)
+            # switch_timezone(dt=arr_utc_time, orig_tz=tz_arr, dst_tz='UTC')
             total_ft += ft
             if total_ft > MAXIMUM_FLIGHT_TIME_HRS:
                 logger.debug(
